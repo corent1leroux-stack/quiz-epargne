@@ -63,6 +63,13 @@ p{margin:0}
 .choice[disabled]{cursor:default}
 .explain{border-left:3px solid var(--accent);padding:4px 0 4px 12px;font-size:14px}
 .explain b{display:block;font-size:13px;margin-bottom:2px}
+.tip{background:var(--accent-soft);border-radius:12px;padding:12px 14px;font-size:14px;display:flex;flex-direction:column;gap:2px}
+.tip b{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--accent)}
+.prizes{display:flex;flex-direction:column;gap:10px}
+.prize{display:grid;grid-template-columns:34px 1fr;gap:12px;align-items:center}
+.prize .medal{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font:800 15px var(--display);background:var(--accent-soft);color:var(--accent)}
+.prize.r1 .medal{background:var(--gold);color:#fff}
+.prize span{font-weight:500;min-width:0}
 .btn{all:unset;box-sizing:border-box;text-align:center;padding:14px 18px;border-radius:12px;background:var(--accent);color:var(--accent-ink);font:600 15px var(--body);cursor:pointer}
 .btn:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
 .btn[disabled]{opacity:.5;cursor:default}
@@ -121,7 +128,7 @@ nav svg{display:block;margin:0 auto 3px;width:20px;height:20px}
 <script>
 const L=["A","B","C","D"];
 const $view=document.getElementById("view"), $who=document.getElementById("who"), $nav=document.getElementById("nav");
-const S={auth:null,tab:"quiz",week:null,nextStart:null,mine:[],qIndex:null,busy:false,board:null,archives:null,review:null,error:null};
+const S={prizes:null,auth:null,tab:"quiz",week:null,nextStart:null,mine:[],qIndex:null,busy:false,board:null,archives:null,review:null,error:null};
 
 /* ---------- Accès à la base (fonctions Supabase) ---------- */
 async function rpc(fn,args={}){
@@ -212,6 +219,7 @@ function renderQuiz(){
   })));
   if(a){
     card.append(el("div",{class:"explain"},el("b",{},a.correct?"Bonne réponse":"Mauvaise réponse"),a.explain));
+    if(a.tip) card.append(el("div",{class:"tip"},el("b",{},"À retenir"),a.tip));
     const last=i===n-1;
     card.append(el("button",{class:"btn",onclick:async()=>{ if(last){ S.qIndex=null; try{ S.week=await rpc("current_week")||S.week; }catch(e){} } else S.qIndex=i+1; render(); }},last?"Voir mon score":"Question suivante"));
   }
@@ -225,20 +233,28 @@ async function answer(i,k){
 }
 
 /* ---------- Classement ---------- */
-async function loadBoard(){ try{ S.board=await rpc("leaderboard"); }catch(e){ S.board={error:e.message}; } if(S.tab==="board") render(); }
+async function loadBoard(){ try{ if(!S.prizes) S.prizes=await rpc("prizes_list").catch(()=>[]); S.board=await rpc("leaderboard"); }catch(e){ S.board={error:e.message}; } if(S.tab==="board") render(); }
 function renderBoard(){
   if(!S.board){ $view.append(el("div",{class:"notice"},"Chargement du classement…")); return; }
   if(S.board.error){ $view.append(el("div",{class:"notice"},S.board.error)); return; }
   let rank=0,prev=null; const rows=S.board.map((r,i)=>{ if(r.points!==prev){rank=i+1;prev=r.points;} return {...r,rank}; });
-  if(!rows.length){ $view.append(el("div",{class:"card"},el("h2",{},"Classement général"),el("p",{class:"muted"},"Personne n'a encore joué. Le premier qui répond prend la tête."))); return; }
+  if(!rows.length){ $view.append(el("div",{class:"card"},el("h2",{},"Classement général"),el("p",{class:"muted"},"Personne n'a encore joué. Le premier qui répond prend la tête."))); renderPrizes(); return; }
   const me=S.auth.pseudo.toLowerCase(), top=rows.slice(0,3), order=[top[1],top[0],top[2]];
   $view.append(
     el("div",{class:"card"},el("h3",{},"Classement général "+new Date().getFullYear()),
       el("div",{class:"podium"},order.map((r,j)=>r?el("div",{class:"step s"+[2,1,3][j]},el("div",{class:"nm"},r.pseudo),el("div",{class:"block"},r.points)):el("div")))),
     el("div",{class:"card"},el("ol",{class:"board"},rows.map(r=>el("li",{class:"row"+(r.rank===1?" p1":"")+(r.pseudo.toLowerCase()===me?" mine":"")},
       el("div",{class:"rank"},r.rank),
-      el("div",{style:"min-width:0"},el("div",{class:"name"},r.pseudo),el("div",{class:"sub"},`${r.weeks_played} semaine${r.weeks_played>1?"s jouées":" jouée"}`)),
+      el("div",{style:"min-width:0"},el("div",{class:"name"},r.pseudo),el("div",{class:"sub"},`${r.weeks_played} semaine${r.weeks_played>1?"s jouées":" jouée"}`+(r.perfect?` · ${r.perfect} sans-faute`:""))),
       el("div",{class:"pts"},r.points,el("small",{},"pts")))))));
+  renderPrizes();
+}
+function renderPrizes(){
+  const p=(S.prizes||[]).filter(x=>x&&x.label);
+  if(!p.length) return;
+  $view.append(el("div",{class:"card"},el("h3",{},"À gagner en fin d'année"),
+    el("div",{class:"prizes"},p.map(x=>el("div",{class:"prize r"+x.rank},el("div",{class:"medal"},x.rank),el("span",{},x.label)))),
+    el("p",{class:"muted",style:"font-size:13px"},"À égalité de points, le nombre de sans-faute départage, puis le nombre de semaines jouées.")));
 }
 
 /* ---------- Archives et corrections ---------- */
@@ -254,7 +270,8 @@ function renderArchive(){
       card.append(el("div",{class:"review"},el("span",{class:"tag "+(it.choice==null?"":ok?"ok":"bad")},it.choice==null?"Non répondu":ok?"Juste":"Faux"),
         el("strong",{},`${i+1}. ${it.q}`),el("p",{},`Réponse : ${L[it.answer]}. ${it.choices[it.answer]}`),
         it.choice!=null&&!ok?el("p",{class:"muted"},`Ta réponse : ${L[it.choice]}. ${it.choices[it.choice]}`):null,
-        el("p",{class:"muted"},it.explain))); });
+        el("p",{class:"muted"},it.explain),
+        it.tip?el("div",{class:"tip"},el("b",{},"À retenir"),it.tip):null)); });
     $view.append(card); return;
   }
   if(!S.archives){ $view.append(el("div",{class:"notice"},"Chargement des archives…")); return; }
