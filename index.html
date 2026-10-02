@@ -1,0 +1,280 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Quiz Épargne</title>
+<meta name="theme-color" content="#0B6E55">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Quiz Épargne">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Instrument+Sans:wght@400;500;600&display=swap">
+<script>
+/* ================== À REMPLIR (étape 3 du guide) ================== */
+const SUPABASE_URL = "https://shtuxeaqijoziohwlclx.supabase.co";
+const SUPABASE_KEY = "sb_publishable_4TEnAMm1Uu_MON6riVHtiw_tHZ1xA2v";
+/* ================================================================== */
+</script>
+<style>
+:root{
+  --bg:#EEF2EF; --surface:#FFFFFF; --ink:#13241D; --muted:#5A6B63; --line:#D7E0DA;
+  --accent:#0B6E55; --accent-ink:#FFFFFF; --accent-soft:#DDEFE8;
+  --gold:#B7790C; --ok:#1F8A4C; --ok-soft:#E1F3E8; --bad:#C2412D; --bad-soft:#FBE7E3;
+  --display:"Bricolage Grotesque",ui-rounded,system-ui,sans-serif;
+  --body:"Instrument Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#0E1613; --surface:#16211D; --ink:#E4EDE8; --muted:#90A39A; --line:#26352F;
+  --accent:#3FC79F; --accent-ink:#082019; --accent-soft:#173A30;
+  --gold:#E3AE4A; --ok:#4FCB83; --ok-soft:#163323; --bad:#F07A66; --bad-soft:#3A1E19; color-scheme:dark}}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{background:var(--bg);margin:0}
+body{color:var(--ink);font:15px/1.5 var(--body);padding:env(safe-area-inset-top,0px) 16px 0;-webkit-text-size-adjust:100%}
+.app{max-width:520px;margin:0 auto;padding-block:20px 110px;display:flex;flex-direction:column;gap:18px}
+header{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.brand{font:800 22px/1.1 var(--display);letter-spacing:-.02em}
+.brand small{display:block;font:500 12px var(--body);color:var(--muted);letter-spacing:.06em;text-transform:uppercase;margin-top:4px}
+.who{font-size:13px;color:var(--muted);text-align:right;min-width:0}
+.who button{all:unset;cursor:pointer;color:var(--accent);font-weight:600;font-size:12px}
+h2{font:800 26px/1.15 var(--display);letter-spacing:-.02em;margin:0;text-wrap:balance}
+h3{font:600 13px var(--body);text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:0}
+p{margin:0}
+.muted{color:var(--muted)}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px;display:flex;flex-direction:column;gap:14px}
+.week-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
+.pill{display:inline-flex;font-size:12px;font-weight:600;padding:4px 10px;border-radius:99px;background:var(--accent-soft);color:var(--accent);white-space:nowrap}
+.dots{display:flex;gap:6px}
+.dots span{flex:1;height:6px;border-radius:3px;background:var(--line)}
+.dots span.ok{background:var(--ok)} .dots span.bad{background:var(--bad)} .dots span.cur{background:var(--accent)}
+.qnum{font:600 13px var(--body);color:var(--accent);font-variant-numeric:tabular-nums}
+.question{font:600 19px/1.35 var(--display);letter-spacing:-.01em;text-wrap:pretty}
+.choices{display:flex;flex-direction:column;gap:10px}
+.choice{all:unset;box-sizing:border-box;display:flex;gap:12px;align-items:flex-start;padding:14px;border:1.5px solid var(--line);border-radius:12px;background:var(--surface);cursor:pointer;font:500 15px/1.4 var(--body);color:var(--ink);transition:border-color .15s,background .15s}
+.choice:hover:not([disabled]){border-color:var(--accent)}
+.choice:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.choice .k{flex:none;width:24px;height:24px;border-radius:7px;display:grid;place-items:center;font:700 12px var(--body);background:var(--bg);color:var(--muted)}
+.choice.right{border-color:var(--ok);background:var(--ok-soft)} .choice.right .k{background:var(--ok);color:#fff}
+.choice.wrong{border-color:var(--bad);background:var(--bad-soft)} .choice.wrong .k{background:var(--bad);color:#fff}
+.choice[disabled]{cursor:default}
+.explain{border-left:3px solid var(--accent);padding:4px 0 4px 12px;font-size:14px}
+.explain b{display:block;font-size:13px;margin-bottom:2px}
+.btn{all:unset;box-sizing:border-box;text-align:center;padding:14px 18px;border-radius:12px;background:var(--accent);color:var(--accent-ink);font:600 15px var(--body);cursor:pointer}
+.btn:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+.btn[disabled]{opacity:.5;cursor:default}
+.btn.ghost{background:transparent;color:var(--accent);border:1.5px solid var(--accent)}
+label{font-size:13px;font-weight:600;color:var(--muted)}
+input{width:100%;padding:13px 14px;border-radius:12px;border:1.5px solid var(--line);background:var(--bg);color:var(--ink);font:500 16px var(--body)}
+input:focus{outline:none;border-color:var(--accent)}
+.field{display:flex;flex-direction:column;gap:6px}
+.error{color:var(--bad);font-size:14px;font-weight:500}
+.score-big{font:800 56px/1 var(--display);letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+.score-big span{font-size:24px;color:var(--muted)}
+.board{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.row{display:grid;grid-template-columns:34px 1fr auto;align-items:center;gap:12px;padding:12px 4px;border-bottom:1px solid var(--line)}
+.row:last-child{border-bottom:0}
+.rank{font:800 18px var(--display);font-variant-numeric:tabular-nums;text-align:center;color:var(--muted)}
+.row.p1 .rank{color:var(--gold)}
+.row .name{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row .sub{font-size:12px;color:var(--muted)}
+.row .pts{font:800 20px var(--display);font-variant-numeric:tabular-nums;text-align:right}
+.row .pts small{font:500 12px var(--body);color:var(--muted);display:block}
+.row.mine{background:var(--accent-soft);border-radius:10px;border-bottom-color:transparent}
+.podium{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;align-items:end}
+.step{display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center;min-width:0}
+.step .nm{font-weight:600;font-size:13px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.step .block{width:100%;border-radius:10px 10px 4px 4px;background:var(--accent-soft);display:grid;place-items:center;font:800 22px var(--display);color:var(--accent)}
+.step.s1 .block{height:84px;background:var(--gold);color:#fff} .step.s2 .block{height:62px} .step.s3 .block{height:46px}
+.archive{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--line)}
+.archive:last-child{border-bottom:0}
+.archive button{all:unset;cursor:pointer;color:var(--accent);font-weight:600;font-size:14px;white-space:nowrap}
+.review{display:flex;flex-direction:column;gap:6px;padding:12px 0;border-bottom:1px solid var(--line)}
+.review:last-child{border-bottom:0}
+.tag{font-size:12px;font-weight:600} .tag.ok{color:var(--ok)} .tag.bad{color:var(--bad)}
+.notice{padding:14px;border-radius:12px;background:var(--surface);border:1px dashed var(--line);font-size:14px;color:var(--muted)}
+nav{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--line);padding:8px 16px calc(8px + env(safe-area-inset-bottom,0px));display:flex;justify-content:center}
+nav .tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;width:100%;max-width:520px}
+nav button{all:unset;cursor:pointer;text-align:center;padding:9px 4px;border-radius:10px;font:600 13px var(--body);color:var(--muted)}
+nav button[aria-selected=true]{background:var(--accent-soft);color:var(--accent)}
+nav svg{display:block;margin:0 auto 3px;width:20px;height:20px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="brand">Quiz Épargne<small>5 questions par semaine</small></div>
+    <div class="who" id="who"></div>
+  </header>
+  <main id="view"><div class="notice">Chargement…</div></main>
+</div>
+<nav id="nav" hidden><div class="tabs" role="tablist">
+  <button role="tab" data-tab="quiz" aria-selected="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6V14"/><circle cx="12" cy="17.5" r=".6" fill="currentColor"/></svg>Cette semaine</button>
+  <button role="tab" data-tab="board" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20V12h4v8M10 20V6h4v14M16 20v-5h4v5"/></svg>Classement</button>
+  <button role="tab" data-tab="archive" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 9h8M8 13h8M8 17h5"/></svg>Archives</button>
+</div></nav>
+
+<script>
+const L=["A","B","C","D"];
+const $view=document.getElementById("view"), $who=document.getElementById("who"), $nav=document.getElementById("nav");
+const S={auth:null,tab:"quiz",week:null,nextStart:null,mine:[],qIndex:null,busy:false,board:null,archives:null,review:null,error:null};
+
+/* ---------- Accès à la base (fonctions Supabase) ---------- */
+async function rpc(fn,args={}){
+  const h={"Content-Type":"application/json",apikey:SUPABASE_KEY};
+  if(!SUPABASE_KEY.startsWith("sb_")) h.Authorization="Bearer "+SUPABASE_KEY;
+  let res;
+  try{ res=await fetch(SUPABASE_URL+"/rest/v1/rpc/"+fn,{method:"POST",headers:h,body:JSON.stringify(args)}); }
+  catch(e){ throw new Error("Pas de connexion. Vérifie ton réseau et réessaie."); }
+  const data=await res.json().catch(()=>null);
+  if(!res.ok) throw new Error((data&&data.message)||"Erreur du serveur.");
+  if(data&&data.error) throw new Error(data.error);
+  return data;
+}
+const cred=()=>({p_pseudo:S.auth.pseudo,p_pin:S.auth.pin});
+
+/* ---------- Session mémorisée sur le téléphone ---------- */
+function loadAuth(){ try{ return JSON.parse(localStorage.getItem("quiz-auth")); }catch(e){ return null; } }
+function saveAuth(a){ try{ a?localStorage.setItem("quiz-auth",JSON.stringify(a)):localStorage.removeItem("quiz-auth"); }catch(e){} }
+
+/* ---------- Utilitaires ---------- */
+function fmt(iso){ return new Date(iso+"T12:00:00").toLocaleDateString("fr-FR",{day:"numeric",month:"long"}); }
+function el(tag,attrs={},...kids){ const e=document.createElement(tag); for(const [k,v] of Object.entries(attrs)){ if(k==="class") e.className=v; else if(k.startsWith("on")) e.addEventListener(k.slice(2),v); else if(v!==false&&v!=null) e.setAttribute(k,v===true?"":v); } for(const c of kids.flat()){ if(c==null||c===false) continue; e.append(c.nodeType?c:document.createTextNode(String(c))); } return e; }
+function setTab(t){ S.tab=t; S.review=null; document.querySelectorAll("nav button").forEach(b=>b.setAttribute("aria-selected",b.dataset.tab===t)); render(); window.scrollTo(0,0); if(t==="board") loadBoard(); if(t==="archive") loadArchives(); }
+document.querySelectorAll("nav button").forEach(b=>b.addEventListener("click",()=>setTab(b.dataset.tab)));
+
+function render(){
+  $view.replaceChildren();
+  $who.replaceChildren();
+  if(S.auth){ $who.append(el("div",{},S.auth.pseudo),el("button",{onclick:logout},"Changer de joueur")); }
+  $nav.hidden=!S.auth;
+  if(S.error){ $view.append(el("div",{class:"notice"},S.error),el("button",{class:"btn ghost",onclick:()=>{S.error=null;start();}},"Réessayer")); return; }
+  if(!S.auth) return renderLogin();
+  if(S.tab==="quiz") renderQuiz(); else if(S.tab==="board") renderBoard(); else renderArchive();
+}
+
+/* ---------- Connexion ---------- */
+function renderLogin(){
+  const name=el("input",{id:"pseudo",type:"text",maxlength:"30",autocomplete:"username",placeholder:"Ex. Corentin"});
+  const pin=el("input",{id:"pin",type:"password",inputmode:"numeric",pattern:"[0-9]*",maxlength:"4",autocomplete:"current-password",placeholder:"4 chiffres"});
+  const err=el("p",{class:"error",role:"alert"});
+  const btn=el("button",{class:"btn",type:"submit"},"Entrer");
+  const form=el("form",{class:"card",onsubmit:async e=>{
+    e.preventDefault(); err.textContent="";
+    const p=name.value.trim(), c=pin.value.trim();
+    if(p.length<2){ err.textContent="Indique ton prénom."; return; }
+    if(!/^\d{4}$/.test(c)){ err.textContent="Le code doit contenir 4 chiffres."; return; }
+    btn.disabled=true; btn.textContent="Connexion…";
+    try{ const r=await rpc("join_quiz",{p_pseudo:p,p_pin:c}); S.auth={pseudo:r.pseudo,pin:c}; saveAuth(S.auth); await loadWeek(); render(); }
+    catch(x){ err.textContent=x.message; btn.disabled=false; btn.textContent="Entrer"; }
+  }},
+    el("h2",{},"Bienvenue dans le quiz"),
+    el("p",{},"Chaque semaine, 5 questions sur l'épargne et les placements. Un point par bonne réponse, et un classement général en fin d'année."),
+    el("div",{class:"field"},el("label",{for:"pseudo"},"Ton prénom"),name),
+    el("div",{class:"field"},el("label",{for:"pin"},"Ton code secret"),pin),
+    el("p",{class:"muted",style:"font-size:13px"},"Première fois ? Choisis un code à 4 chiffres et retiens-le : il te servira pour te reconnecter sur un autre appareil."),
+    err,btn);
+  $view.append(form);
+}
+function logout(){ S.auth=null; saveAuth(null); S.mine=[]; S.qIndex=null; S.tab="quiz"; render(); }
+
+/* ---------- Semaine en cours ---------- */
+async function loadWeek(){
+  S.week=await rpc("current_week");
+  if(!S.week) S.nextStart=await rpc("next_week_start");
+  S.mine=S.week? await rpc("my_week",{...cred(),p_week:S.week.id}) : [];
+}
+function renderQuiz(){
+  const w=S.week;
+  if(!w){ $view.append(el("div",{class:"card"},el("h2",{},"Pas de série ouverte"),el("p",{class:"muted"},S.nextStart?`Prochaine série le ${fmt(S.nextStart)}.`:"Les prochaines questions arrivent bientôt."))); return; }
+  const n=w.questions.length, mine=S.mine, done=mine.length>=n;
+  const card=el("div",{class:"card"},
+    el("div",{class:"week-head"},el("div",{},el("h3",{},w.label),el("h2",{},w.theme)),el("span",{class:"pill"},`Jusqu'au ${fmt(w.end)}`)),
+    el("div",{class:"dots"},w.questions.map((q,i)=>el("span",{class:i<mine.length?(mine[i].correct?"ok":"bad"):(i===mine.length&&!done?"cur":"")}))));
+  if(done&&S.qIndex===null){
+    const sc=mine.filter(m=>m.correct).length;
+    card.append(el("div",{},el("p",{class:"muted"},"Ton score cette semaine"),el("div",{class:"score-big"},sc,el("span",{}," / "+n))),
+      el("p",{},sc===n?"Sans faute. Bravo.":sc>=3?"Bon score. Les corrections détaillées sont dans les archives.":"Relis les corrections dans les archives : elles serviront pour la suite."),
+      el("button",{class:"btn ghost",onclick:()=>{setTab("archive");openReview(w.id);}},"Voir les corrections"),
+      el("button",{class:"btn",onclick:()=>setTab("board")},"Voir le classement"),
+      el("p",{class:"muted",style:"font-size:13px;text-align:center"},`${w.finished} participant${w.finished>1?"s ont":" a"} terminé la série.`));
+    $view.append(card); return;
+  }
+  const i=S.qIndex!==null?S.qIndex:mine.length, q=w.questions[i], a=mine[i];
+  card.append(el("div",{class:"qnum"},`Question ${i+1} sur ${n}`),el("div",{class:"question"},q.q));
+  card.append(el("div",{class:"choices"},q.choices.map((c,k)=>{
+    let cls="choice"; if(a){ if(k===a.answer) cls+=" right"; else if(k===a.choice) cls+=" wrong"; }
+    return el("button",{class:cls,disabled:!!a||S.busy,onclick:()=>answer(i,k)},el("span",{class:"k"},L[k]),el("span",{},c));
+  })));
+  if(a){
+    card.append(el("div",{class:"explain"},el("b",{},a.correct?"Bonne réponse":"Mauvaise réponse"),a.explain));
+    const last=i===n-1;
+    card.append(el("button",{class:"btn",onclick:async()=>{ if(last){ S.qIndex=null; try{ S.week=await rpc("current_week")||S.week; }catch(e){} } else S.qIndex=i+1; render(); }},last?"Voir mon score":"Question suivante"));
+  }
+  $view.append(card);
+}
+async function answer(i,k){
+  if(S.busy) return; S.busy=true; render();
+  try{ const r=await rpc("submit_answer",{...cred(),p_week:S.week.id,p_q:i,p_choice:k}); S.mine[i]=r; S.qIndex=i; }
+  catch(e){ alert(e.message); }
+  S.busy=false; render();
+}
+
+/* ---------- Classement ---------- */
+async function loadBoard(){ try{ S.board=await rpc("leaderboard"); }catch(e){ S.board={error:e.message}; } if(S.tab==="board") render(); }
+function renderBoard(){
+  if(!S.board){ $view.append(el("div",{class:"notice"},"Chargement du classement…")); return; }
+  if(S.board.error){ $view.append(el("div",{class:"notice"},S.board.error)); return; }
+  let rank=0,prev=null; const rows=S.board.map((r,i)=>{ if(r.points!==prev){rank=i+1;prev=r.points;} return {...r,rank}; });
+  if(!rows.length){ $view.append(el("div",{class:"card"},el("h2",{},"Classement général"),el("p",{class:"muted"},"Personne n'a encore joué. Le premier qui répond prend la tête."))); return; }
+  const me=S.auth.pseudo.toLowerCase(), top=rows.slice(0,3), order=[top[1],top[0],top[2]];
+  $view.append(
+    el("div",{class:"card"},el("h3",{},"Classement général "+new Date().getFullYear()),
+      el("div",{class:"podium"},order.map((r,j)=>r?el("div",{class:"step s"+[2,1,3][j]},el("div",{class:"nm"},r.pseudo),el("div",{class:"block"},r.points)):el("div")))),
+    el("div",{class:"card"},el("ol",{class:"board"},rows.map(r=>el("li",{class:"row"+(r.rank===1?" p1":"")+(r.pseudo.toLowerCase()===me?" mine":"")},
+      el("div",{class:"rank"},r.rank),
+      el("div",{style:"min-width:0"},el("div",{class:"name"},r.pseudo),el("div",{class:"sub"},`${r.weeks_played} semaine${r.weeks_played>1?"s jouées":" jouée"}`)),
+      el("div",{class:"pts"},r.points,el("small",{},"pts")))))));
+}
+
+/* ---------- Archives et corrections ---------- */
+async function loadArchives(){ try{ S.archives=await rpc("archives",cred()); }catch(e){ S.archives={error:e.message}; } if(S.tab==="archive") render(); }
+async function openReview(id){ S.review={loading:true}; render(); try{ S.review=await rpc("corrections",{...cred(),p_week:id}); }catch(e){ S.review={error:e.message}; } render(); }
+function renderArchive(){
+  if(S.review){
+    const back=el("button",{class:"btn ghost",onclick:()=>{S.review=null;render();}},"← Toutes les semaines");
+    if(S.review.loading){ $view.append(el("div",{class:"notice"},"Chargement…")); return; }
+    if(S.review.error){ $view.append(el("div",{class:"card"},back,el("div",{class:"notice"},S.review.error))); return; }
+    const r=S.review, card=el("div",{class:"card"},back,el("h3",{},r.label),el("h2",{},r.theme));
+    r.items.forEach((it,i)=>{ const ok=it.choice===it.answer;
+      card.append(el("div",{class:"review"},el("span",{class:"tag "+(it.choice==null?"":ok?"ok":"bad")},it.choice==null?"Non répondu":ok?"Juste":"Faux"),
+        el("strong",{},`${i+1}. ${it.q}`),el("p",{},`Réponse : ${L[it.answer]}. ${it.choices[it.answer]}`),
+        it.choice!=null&&!ok?el("p",{class:"muted"},`Ta réponse : ${L[it.choice]}. ${it.choices[it.choice]}`):null,
+        el("p",{class:"muted"},it.explain))); });
+    $view.append(card); return;
+  }
+  if(!S.archives){ $view.append(el("div",{class:"notice"},"Chargement des archives…")); return; }
+  if(S.archives.error){ $view.append(el("div",{class:"notice"},S.archives.error)); return; }
+  if(!S.archives.length){ $view.append(el("div",{class:"notice"},"Aucune semaine pour l'instant.")); return; }
+  $view.append(el("div",{class:"card"},el("h2",{},"Archives"),el("div",{},S.archives.map(w=>
+    el("div",{class:"archive"},el("div",{style:"min-width:0"},el("strong",{},`${w.label} · ${w.theme}`),
+      el("div",{class:"muted",style:"font-size:13px"},w.answered?`Ton score : ${w.score} / ${w.total}`:"Pas joué")),
+      el("button",{onclick:()=>openReview(w.id)},"Corrections"))))));
+}
+
+/* ---------- Démarrage ---------- */
+async function start(){
+  if(SUPABASE_URL.includes("VOTRE-PROJET")){ S.error="L'appli n'est pas encore reliée à sa base de données : renseigne SUPABASE_URL et SUPABASE_KEY en haut du fichier."; render(); return; }
+  S.auth=loadAuth();
+  if(S.auth){ try{ await loadWeek(); }catch(e){ if(/Code|Prénom|essais/.test(e.message)){ S.auth=null; saveAuth(null); } else S.error=e.message; } }
+  render();
+}
+document.addEventListener("visibilitychange",async()=>{ if(document.visibilityState==="visible"&&S.auth&&!S.busy&&S.qIndex===null){ try{ await loadWeek(); render(); }catch(e){} } });
+start();
+</script>
+</body>
+</html>
