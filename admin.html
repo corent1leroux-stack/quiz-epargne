@@ -1,0 +1,352 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Admin Quiz Épargne</title>
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#0B6E55">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Quiz Épargne">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Instrument+Sans:wght@400;500;600&display=swap">
+<script>
+/* ================== À REMPLIR (étape 3 du guide) ================== */
+const SUPABASE_URL = "https://shtuxeaqijoziohwlclx.supabase.co";
+const SUPABASE_KEY = "sb_publishable_4TEnAMm1Uu_MON6riVHtiw_tHZ1xA2v";
+/* ================================================================== */
+</script>
+<style>
+:root{
+  --bg:#EEF2EF; --surface:#FFFFFF; --ink:#13241D; --muted:#5A6B63; --line:#D7E0DA;
+  --accent:#0B6E55; --accent-ink:#FFFFFF; --accent-soft:#DDEFE8;
+  --gold:#B7790C; --ok:#1F8A4C; --ok-soft:#E1F3E8; --bad:#C2412D; --bad-soft:#FBE7E3;
+  --display:"Bricolage Grotesque",ui-rounded,system-ui,sans-serif;
+  --body:"Instrument Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#0E1613; --surface:#16211D; --ink:#E4EDE8; --muted:#90A39A; --line:#26352F;
+  --accent:#3FC79F; --accent-ink:#082019; --accent-soft:#173A30;
+  --gold:#E3AE4A; --ok:#4FCB83; --ok-soft:#163323; --bad:#F07A66; --bad-soft:#3A1E19; color-scheme:dark}}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{background:var(--bg);margin:0}
+body{color:var(--ink);font:15px/1.5 var(--body);padding:env(safe-area-inset-top,0px) 16px 0;-webkit-text-size-adjust:100%}
+.app{max-width:520px;margin:0 auto;padding-block:20px 110px;display:flex;flex-direction:column;gap:18px}
+header{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.brand{font:800 22px/1.1 var(--display);letter-spacing:-.02em}
+.brand small{display:block;font:500 12px var(--body);color:var(--muted);letter-spacing:.06em;text-transform:uppercase;margin-top:4px}
+.who{font-size:13px;color:var(--muted);text-align:right;min-width:0}
+.who button{all:unset;cursor:pointer;color:var(--accent);font-weight:600;font-size:12px}
+h2{font:800 26px/1.15 var(--display);letter-spacing:-.02em;margin:0;text-wrap:balance}
+h3{font:600 13px var(--body);text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:0}
+p{margin:0}
+.muted{color:var(--muted)}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px;display:flex;flex-direction:column;gap:14px}
+.week-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
+.pill{display:inline-flex;font-size:12px;font-weight:600;padding:4px 10px;border-radius:99px;background:var(--accent-soft);color:var(--accent);white-space:nowrap}
+.dots{display:flex;gap:6px}
+.dots span{flex:1;height:6px;border-radius:3px;background:var(--line)}
+.dots span.ok{background:var(--ok)} .dots span.bad{background:var(--bad)} .dots span.cur{background:var(--accent)}
+.qnum{font:600 13px var(--body);color:var(--accent);font-variant-numeric:tabular-nums}
+.question{font:600 19px/1.35 var(--display);letter-spacing:-.01em;text-wrap:pretty}
+.choices{display:flex;flex-direction:column;gap:10px}
+.choice{all:unset;box-sizing:border-box;display:flex;gap:12px;align-items:flex-start;padding:14px;border:1.5px solid var(--line);border-radius:12px;background:var(--surface);cursor:pointer;font:500 15px/1.4 var(--body);color:var(--ink);transition:border-color .15s,background .15s}
+.choice:hover:not([disabled]){border-color:var(--accent)}
+.choice:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.choice .k{flex:none;width:24px;height:24px;border-radius:7px;display:grid;place-items:center;font:700 12px var(--body);background:var(--bg);color:var(--muted)}
+.choice.right{border-color:var(--ok);background:var(--ok-soft)} .choice.right .k{background:var(--ok);color:#fff}
+.choice.wrong{border-color:var(--bad);background:var(--bad-soft)} .choice.wrong .k{background:var(--bad);color:#fff}
+.choice[disabled]{cursor:default}
+.explain{border-left:3px solid var(--accent);padding:4px 0 4px 12px;font-size:14px}
+.explain b{display:block;font-size:13px;margin-bottom:2px}
+.tip{background:var(--accent-soft);border-radius:12px;padding:12px 14px;font-size:14px;display:flex;flex-direction:column;gap:2px}
+.tip b{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--accent)}
+.prizes{display:flex;flex-direction:column;gap:10px}
+.prize{display:grid;grid-template-columns:34px 1fr;gap:12px;align-items:center}
+.prize .medal{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font:800 15px var(--display);background:var(--accent-soft);color:var(--accent)}
+.prize.r1 .medal{background:var(--gold);color:#fff}
+.prize span{font-weight:500;min-width:0}
+.btn{all:unset;box-sizing:border-box;text-align:center;padding:14px 18px;border-radius:12px;background:var(--accent);color:var(--accent-ink);font:600 15px var(--body);cursor:pointer}
+.btn:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+.btn[disabled]{opacity:.5;cursor:default}
+.btn.ghost{background:transparent;color:var(--accent);border:1.5px solid var(--accent)}
+label{font-size:13px;font-weight:600;color:var(--muted)}
+input{width:100%;padding:13px 14px;border-radius:12px;border:1.5px solid var(--line);background:var(--bg);color:var(--ink);font:500 16px var(--body)}
+input:focus{outline:none;border-color:var(--accent)}
+.field{display:flex;flex-direction:column;gap:6px}
+.error{color:var(--bad);font-size:14px;font-weight:500}
+.score-big{font:800 56px/1 var(--display);letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+.score-big span{font-size:24px;color:var(--muted)}
+.board{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.row{display:grid;grid-template-columns:34px 1fr auto;align-items:center;gap:12px;padding:12px 4px;border-bottom:1px solid var(--line)}
+.row:last-child{border-bottom:0}
+.rank{font:800 18px var(--display);font-variant-numeric:tabular-nums;text-align:center;color:var(--muted)}
+.row.p1 .rank{color:var(--gold)}
+.row .name{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row .sub{font-size:12px;color:var(--muted)}
+.row .pts{font:800 20px var(--display);font-variant-numeric:tabular-nums;text-align:right}
+.row .pts small{font:500 12px var(--body);color:var(--muted);display:block}
+.row.mine{background:var(--accent-soft);border-radius:10px;border-bottom-color:transparent}
+.podium{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;align-items:end}
+.step{display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center;min-width:0}
+.step .nm{font-weight:600;font-size:13px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.step .block{width:100%;border-radius:10px 10px 4px 4px;background:var(--accent-soft);display:grid;place-items:center;font:800 22px var(--display);color:var(--accent)}
+.step.s1 .block{height:84px;background:var(--gold);color:#fff} .step.s2 .block{height:62px} .step.s3 .block{height:46px}
+.archive{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--line)}
+.archive:last-child{border-bottom:0}
+.archive button{all:unset;cursor:pointer;color:var(--accent);font-weight:600;font-size:14px;white-space:nowrap}
+.review{display:flex;flex-direction:column;gap:6px;padding:12px 0;border-bottom:1px solid var(--line)}
+.review:last-child{border-bottom:0}
+.tag{font-size:12px;font-weight:600} .tag.ok{color:var(--ok)} .tag.bad{color:var(--bad)}
+.notice{padding:14px;border-radius:12px;background:var(--surface);border:1px dashed var(--line);font-size:14px;color:var(--muted)}
+nav{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--line);padding:8px 16px calc(8px + env(safe-area-inset-bottom,0px));display:flex;justify-content:center}
+nav .tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;width:100%;max-width:520px}
+nav button{all:unset;cursor:pointer;text-align:center;padding:9px 4px;border-radius:10px;font:600 13px var(--body);color:var(--muted)}
+nav button[aria-selected=true]{background:var(--accent-soft);color:var(--accent)}
+nav svg{display:block;margin:0 auto 3px;width:20px;height:20px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<style>
+.app{padding-block:20px 110px}
+.badge{display:inline-flex;font-size:12px;font-weight:600;padding:3px 9px;border-radius:99px;background:var(--line);color:var(--muted);white-space:nowrap}
+.badge.live{background:var(--accent-soft);color:var(--accent)}
+.badge.warn{background:var(--bad-soft);color:var(--bad)}
+.kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.kpi b{font:800 26px/1.1 var(--display);font-variant-numeric:tabular-nums}
+.kpi span{font-size:12px;color:var(--muted)}
+select{width:100%;padding:12px 14px;border-radius:12px;border:1.5px solid var(--line);background:var(--surface);color:var(--ink);font:600 15px var(--body)}
+textarea{width:100%;min-height:90px;padding:12px 14px;border-radius:12px;border:1.5px solid var(--line);background:var(--bg);color:var(--ink);font:500 15px/1.45 var(--body);resize:vertical}
+textarea:focus,select:focus{outline:none;border-color:var(--accent)}
+.qstat{display:flex;flex-direction:column;gap:8px;padding:14px 0;border-bottom:1px solid var(--line)}
+.qstat:last-child{border-bottom:0}
+.qstat .top{display:flex;justify-content:space-between;gap:12px;align-items:baseline}
+.rate{font:800 18px var(--display);font-variant-numeric:tabular-nums;white-space:nowrap}
+.rate.low{color:var(--bad)} .rate.mid{color:var(--gold)} .rate.high{color:var(--ok)}
+.dist{display:flex;flex-direction:column;gap:4px}
+.bar{display:grid;grid-template-columns:22px 1fr 34px;gap:8px;align-items:center;font-size:13px}
+.bar .track{height:8px;border-radius:4px;background:var(--line);overflow:hidden}
+.bar .fill{height:100%;background:var(--muted);border-radius:4px}
+.bar.good .fill{background:var(--ok)}
+.bar .n{text-align:right;color:var(--muted);font-variant-numeric:tabular-nums}
+.link{all:unset;cursor:pointer;color:var(--accent);font-weight:600;font-size:14px}
+.link.danger{color:var(--bad)}
+.player{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.player:last-child{border-bottom:0}
+.actions{display:flex;gap:14px;flex-wrap:wrap}
+.inline{display:flex;gap:8px;align-items:center;flex-wrap:wrap;width:100%;padding:10px;border-radius:12px;background:var(--bg)}
+.inline input{flex:1;min-width:120px}
+.btn.small{padding:10px 14px;font-size:14px}
+.btn.danger{background:var(--bad);color:#fff}
+.radio{display:flex;align-items:center;gap:8px}
+.radio input{width:auto}
+.ok-msg{color:var(--ok);font-size:14px;font-weight:600}
+</style>
+
+<div class="app">
+  <header>
+    <div class="brand">Quiz Épargne<small>Mode administrateur</small></div>
+    <div class="who" id="who"></div>
+  </header>
+  <main id="view"><div class="notice">Chargement…</div></main>
+</div>
+<nav id="nav" hidden><div class="tabs" role="tablist" style="grid-template-columns:repeat(4,1fr)">
+  <button role="tab" data-tab="suivi" aria-selected="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20V12h4v8M10 20V6h4v14M16 20v-5h4v5"/></svg>Suivi</button>
+  <button role="tab" data-tab="joueurs" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.6 3.4-5.5 6.5-5.5s5.7 1.9 6.5 5.5M16 4.5a3.5 3.5 0 0 1 0 7M18 14.8c1.8.8 3 2.5 3.5 5.2"/></svg>Joueurs</button>
+  <button role="tab" data-tab="lots" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="8" width="18" height="13" rx="2"/><path d="M12 8v13M3 12h18M12 8c-1.5-3-5-4-5-1.5S10 8 12 8zm0 0c1.5-3 5-4 5-1.5S14 8 12 8z"/></svg>Lots</button>
+  <button role="tab" data-tab="reglages" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-2.9 1.2V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-2.9-1.2l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.7 1.7 0 0 0 3 14.1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.2-2.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 2.9-1.2V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 2.9 1.2l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0 1.2 2.9h.1a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>Réglages</button>
+</div></nav>
+
+<script>
+const L=["A","B","C","D"];
+const $view=document.getElementById("view"), $who=document.getElementById("who"), $nav=document.getElementById("nav");
+const S={pass:null,configured:null,data:null,tab:"suivi",week:null,edit:null,player:null,flash:null,error:null};
+
+async function rpc(fn,args={}){
+  const h={"Content-Type":"application/json",apikey:SUPABASE_KEY};
+  if(!SUPABASE_KEY.startsWith("sb_")) h.Authorization="Bearer "+SUPABASE_KEY;
+  let res;
+  try{ res=await fetch(SUPABASE_URL+"/rest/v1/rpc/"+fn,{method:"POST",headers:h,body:JSON.stringify(args)}); }
+  catch(e){ throw new Error("Pas de connexion. Vérifie ton réseau et réessaie."); }
+  const data=await res.json().catch(()=>null);
+  if(!res.ok) throw new Error((data&&data.message)||"Erreur du serveur.");
+  if(data&&data.error) throw new Error(data.error);
+  return data;
+}
+function el(tag,attrs={},...kids){ const e=document.createElement(tag); for(const [k,v] of Object.entries(attrs)){ if(k==="class") e.className=v; else if(k.startsWith("on")) e.addEventListener(k.slice(2),v); else if(k==="value") e.value=v; else if(v!==false&&v!=null) e.setAttribute(k,v===true?"":v); } for(const c of kids.flat()){ if(c==null||c===false) continue; e.append(c.nodeType?c:document.createTextNode(String(c))); } return e; }
+function fmt(iso){ return new Date(iso+(iso.length===10?"T12:00:00":"")).toLocaleDateString("fr-FR",{day:"numeric",month:"short"}); }
+function ago(ts){ if(!ts) return "jamais joué"; const d=Math.floor((Date.now()-new Date(ts))/864e5); return d<=0?"actif aujourd'hui":d===1?"actif hier":`actif il y a ${d} jours`; }
+function pct(a,b){ return b?Math.round(100*a/b):null; }
+function savePass(p){ try{ p?sessionStorage.setItem("quiz-admin",p):sessionStorage.removeItem("quiz-admin"); }catch(e){} }
+function loadPass(){ try{ return sessionStorage.getItem("quiz-admin"); }catch(e){ return null; } }
+
+function setTab(t){ S.tab=t; S.edit=null; S.player=null; S.flash=null; document.querySelectorAll("nav button").forEach(b=>b.setAttribute("aria-selected",b.dataset.tab===t)); render(); window.scrollTo(0,0); }
+document.querySelectorAll("nav button").forEach(b=>b.addEventListener("click",()=>setTab(b.dataset.tab)));
+
+async function refresh(){ S.data=await rpc("admin_overview",{p_pass:S.pass}); if(!S.week||!S.data.weeks.find(w=>w.id===S.week)) S.week=currentWeekId(); }
+function currentWeekId(){ const t=S.data.today, ws=S.data.weeks; const cur=ws.filter(w=>w.start<=t&&t<=w.end).pop(); if(cur) return cur.id; const past=ws.filter(w=>w.start<=t).pop(); return (past||ws[0]||{}).id; }
+
+function render(){
+  $view.replaceChildren(); $who.replaceChildren();
+  $nav.hidden=!S.data;
+  if(S.error){ $view.append(el("div",{class:"notice"},S.error)); return; }
+  if(S.configured===null){ $view.append(el("div",{class:"notice"},"Chargement…")); return; }
+  if(!S.data) return renderLogin();
+  $who.append(el("button",{onclick:logout},"Se déconnecter"));
+  if(S.flash) $view.append(el("p",{class:"ok-msg",role:"status"},S.flash));
+  ({suivi:renderSuivi,joueurs:renderPlayers,lots:renderPrizes,reglages:renderSettings})[S.tab]();
+}
+
+/* ---------- Connexion / création du mot de passe ---------- */
+function renderLogin(){
+  const first=!S.configured;
+  const pass=el("input",{id:"pass",type:"password",autocomplete:first?"new-password":"current-password",placeholder:"8 caractères minimum"});
+  const pass2=first?el("input",{id:"pass2",type:"password",autocomplete:"new-password",placeholder:"Retape le mot de passe"}):null;
+  const err=el("p",{class:"error",role:"alert"}), btn=el("button",{class:"btn",type:"submit"},first?"Créer le mot de passe":"Entrer");
+  $view.append(el("form",{class:"card",onsubmit:async e=>{
+    e.preventDefault(); err.textContent="";
+    if(first&&pass.value!==pass2.value){ err.textContent="Les deux mots de passe ne sont pas identiques."; return; }
+    btn.disabled=true;
+    try{
+      if(first){ await rpc("admin_setup",{p_pass:pass.value}); S.configured=true; }
+      S.pass=pass.value; await refresh(); savePass(S.pass); render();
+    }catch(x){ err.textContent=x.message; btn.disabled=false; S.pass=null; }
+  }},
+    el("h2",{},first?"Crée ton accès administrateur":"Accès administrateur"),
+    el("p",{class:"muted"},first?"Ce mot de passe protège le suivi, les joueurs et les questions. Choisis-le maintenant : une fois créé, personne d'autre ne pourra le définir.":"Entre ton mot de passe administrateur."),
+    el("div",{class:"field"},el("label",{for:"pass"},"Mot de passe"),pass),
+    first?el("div",{class:"field"},el("label",{for:"pass2"},"Confirmation"),pass2):null,
+    err,btn));
+}
+function logout(){ S.pass=null; S.data=null; savePass(null); render(); }
+
+/* ---------- Suivi : participation et statistiques par question ---------- */
+function renderSuivi(){
+  const d=S.data, w=d.weeks.find(x=>x.id===S.week);
+  if(S.edit!==null&&w) return renderEdit(w);
+  const t=d.today, played=d.players.filter(p=>p.weeks_played>0).length;
+  $view.append(el("div",{class:"kpis"},
+    el("div",{class:"kpi"},el("b",{},d.players.length),el("span",{},"inscrits")),
+    el("div",{class:"kpi"},el("b",{},w?w.finished:0),el("span",{},"ont fini cette série")),
+    el("div",{class:"kpi"},el("b",{},played),el("span",{},"ont déjà joué"))));
+  const sel=el("select",{id:"week",onchange:e=>{S.week=e.target.value;render();}},
+    d.weeks.map(x=>{ const o=el("option",{value:x.id},`${x.label} · ${x.theme}`+(x.start<=t&&t<=x.end?" (en cours)":x.start>t?" (à venir)":"")); if(x.id===S.week) o.selected=true; return o; }));
+  $view.append(el("div",{class:"field"},el("label",{for:"week"},"Série"),sel));
+  if(!w) return;
+  const state=w.start>t?el("span",{class:"badge"},`Ouvre le ${fmt(w.start)}`):w.end<t?el("span",{class:"badge"},"Terminée"):el("span",{class:"badge live"},`En cours jusqu'au ${fmt(w.end)}`);
+  const card=el("div",{class:"card"},
+    el("div",{class:"week-head"},el("div",{},el("h3",{},w.label),el("h2",{},w.theme)),state),
+    el("p",{class:"muted"},w.start>t?"Série pas encore ouverte : tu peux relire et corriger les questions.":`${w.started} joueur${w.started>1?"s ont":" a"} commencé, ${w.finished} ${w.finished>1?"ont":"a"} terminé.`+(w.counts?"":" Semaine d'essai, hors classement.")));
+  w.questions.forEach((q,i)=>{
+    const r=pct(q.ok,q.n), cls=r==null?"":r<50?"low":r<75?"mid":"high";
+    card.append(el("div",{class:"qstat"},
+      el("div",{class:"top"},el("strong",{},`${i+1}. ${q.q}`),el("span",{class:"rate "+cls},r==null?"—":r+" %")),
+      el("div",{class:"dist"},q.choices.map((c,k)=>{ const n=(q.dist||[])[k]||0; return el("div",{class:"bar"+(k===q.answer?" good":""),title:c},
+        el("span",{},L[k]),el("div",{class:"track"},el("div",{class:"fill",style:`width:${q.n?Math.round(100*n/q.n):0}%`})),el("span",{class:"n"},n)); })),
+      el("p",{class:"muted",style:"font-size:13px"},`Bonne réponse : ${L[q.answer]}. ${q.choices[q.answer]}`+(q.n?` · ${q.n} réponse${q.n>1?"s":""}`:"")),
+      el("div",{},el("button",{class:"link",onclick:()=>{S.edit=i;S.flash=null;render();window.scrollTo(0,0);}},"Modifier la question"))));
+  });
+  $view.append(card);
+  $view.append(el("p",{class:"muted",style:"font-size:13px"},"Le pourcentage indique la part de bonnes réponses. En rouge, moins de 50 % : un bon sujet à reprendre en atelier."));
+}
+
+function renderEdit(w){
+  const i=S.edit, q=w.questions[i];
+  const text=el("textarea",{id:"q-text",value:q.q});
+  const choices=q.choices.map((c,k)=>el("input",{id:"q-c"+k,type:"text",value:c}));
+  const radios=q.choices.map((c,k)=>{ const r=el("input",{type:"radio",name:"good",id:"q-r"+k,value:String(k)}); if(k===q.answer) r.checked=true; return r; });
+  const explain=el("textarea",{id:"q-exp",value:q.explain||""}), tip=el("textarea",{id:"q-tip",value:q.tip||"",style:"min-height:60px"});
+  const err=el("p",{class:"error",role:"alert"}), btn=el("button",{class:"btn",type:"submit"},"Enregistrer");
+  const answered=q.n>0;
+  $view.append(el("form",{class:"card",onsubmit:async e=>{
+    e.preventDefault(); err.textContent=""; btn.disabled=true;
+    const ans=radios.findIndex(r=>r.checked);
+    try{
+      await rpc("admin_update_question",{p_pass:S.pass,p_week:w.id,p_q:i,p_text:text.value,p_choices:choices.map(c=>c.value),p_answer:ans,p_explain:explain.value,p_tip:tip.value});
+      await refresh(); S.edit=null; S.flash="Question enregistrée."; render(); window.scrollTo(0,0);
+    }catch(x){ err.textContent=x.message; btn.disabled=false; }
+  }},
+    el("button",{class:"link",type:"button",onclick:()=>{S.edit=null;render();}},"← Retour à la série"),
+    el("h3",{},`${w.label} · question ${i+1}`),
+    el("div",{class:"field"},el("label",{for:"q-text"},"Question"),text),
+    el("div",{class:"field"},el("label",{},"Réponses (coche la bonne)"),
+      choices.map((c,k)=>el("div",{class:"radio"},radios[k],el("span",{style:"font-weight:700;width:16px"},L[k]),c))),
+    answered?el("p",{class:"notice"},`${q.n} joueur${q.n>1?"s ont":" a"} déjà répondu. Si tu changes la bonne réponse, leurs scores seront recalculés automatiquement.`):null,
+    el("div",{class:"field"},el("label",{for:"q-exp"},"Explication"),explain),
+    el("div",{class:"field"},el("label",{for:"q-tip"},"À retenir (facultatif)"),tip),
+    err,btn));
+}
+
+/* ---------- Joueurs ---------- */
+function renderPlayers(){
+  const ps=S.data.players;
+  const card=el("div",{class:"card"},el("h2",{},"Joueurs"),el("p",{class:"muted"},`${ps.length} inscrit${ps.length>1?"s":""}. Total des points sur toutes les semaines, essai compris.`));
+  if(!ps.length) card.append(el("div",{class:"notice"},"Personne ne s'est encore inscrit."));
+  ps.forEach(p=>{
+    const row=el("div",{class:"player"},
+      el("div",{style:"min-width:0"},el("strong",{},p.pseudo," ",p.locked?el("span",{class:"badge warn"},"bloqué 15 min"):null),
+        el("div",{class:"muted",style:"font-size:13px"},`${p.points} pts · ${p.weeks_played} semaine${p.weeks_played>1?"s":""} · ${ago(p.last_seen)}`)),
+      el("div",{class:"actions"},
+        el("button",{class:"link",onclick:()=>{S.player={name:p.pseudo,mode:"pin"};S.flash=null;render();}},"Nouveau code"),
+        el("button",{class:"link danger",onclick:()=>{S.player={name:p.pseudo,mode:"del"};S.flash=null;render();}},"Supprimer")));
+    if(S.player&&S.player.name===p.pseudo) row.append(S.player.mode==="pin"?pinForm(p):deleteForm(p));
+    card.append(row);
+  });
+  $view.append(card);
+}
+function pinForm(p){
+  const pin=el("input",{id:"newpin",type:"text",inputmode:"numeric",maxlength:"4",placeholder:"4 chiffres"}), err=el("p",{class:"error"});
+  return el("form",{class:"inline",onsubmit:async e=>{ e.preventDefault(); err.textContent="";
+    try{ await rpc("admin_reset_pin",{p_pass:S.pass,p_pseudo:p.pseudo,p_pin:pin.value.trim()}); await refresh(); S.player=null; S.flash=`Nouveau code de ${p.pseudo} : ${pin.value.trim()}. Transmets-le-lui.`; render(); }
+    catch(x){ err.textContent=x.message; } }},
+    el("label",{for:"newpin",style:"width:100%"},`Nouveau code pour ${p.pseudo}`),pin,el("button",{class:"btn small",type:"submit"},"Valider"),
+    el("button",{class:"link",type:"button",onclick:()=>{S.player=null;render();}},"Annuler"),err);
+}
+function deleteForm(p){
+  const err=el("p",{class:"error"});
+  return el("div",{class:"inline"},el("p",{style:"width:100%"},`Supprimer ${p.pseudo} et toutes ses réponses ? C'est définitif.`),
+    el("button",{class:"btn small danger",onclick:async()=>{ try{ await rpc("admin_delete_player",{p_pass:S.pass,p_pseudo:p.pseudo}); await refresh(); S.player=null; S.flash=`${p.pseudo} a été supprimé.`; render(); }catch(x){ err.textContent=x.message; } }},"Supprimer"),
+    el("button",{class:"link",onclick:()=>{S.player=null;render();}},"Annuler"),err);
+}
+
+/* ---------- Lots ---------- */
+function renderPrizes(){
+  const cur={}; (S.data.prizes||[]).forEach(p=>cur[p.rank]=p.label);
+  const inputs=[1,2,3].map(r=>el("input",{id:"prize"+r,type:"text",maxlength:"120",value:cur[r]||""}));
+  const err=el("p",{class:"error",role:"alert"}), btn=el("button",{class:"btn",type:"submit"},"Enregistrer les lots");
+  $view.append(el("form",{class:"card",onsubmit:async e=>{ e.preventDefault(); err.textContent=""; btn.disabled=true;
+    try{ for(let r=1;r<=3;r++){ const v=inputs[r-1].value.trim(); if(v!==(cur[r]||"")) await rpc("admin_set_prize",{p_pass:S.pass,p_rank:r,p_label:v}); }
+      await refresh(); S.flash="Lots enregistrés. Ils s'affichent sous le classement."; render(); }
+    catch(x){ err.textContent=x.message; btn.disabled=false; } }},
+    el("h2",{},"Lots du podium"),el("p",{class:"muted"},"Ils apparaissent pour tous les joueurs, sous le classement général."),
+    [1,2,3].map(r=>el("div",{class:"field"},el("label",{for:"prize"+r},r===1?"1re place":`${r}e place`),inputs[r-1])),err,btn));
+}
+
+/* ---------- Réglages ---------- */
+function renderSettings(){
+  const cur=el("input",{id:"cur",type:"password",autocomplete:"current-password"}), nw=el("input",{id:"new",type:"password",autocomplete:"new-password",placeholder:"8 caractères minimum"});
+  const err=el("p",{class:"error",role:"alert"});
+  $view.append(el("form",{class:"card",onsubmit:async e=>{ e.preventDefault(); err.textContent="";
+    try{ await rpc("admin_change_password",{p_pass:cur.value,p_new:nw.value}); S.pass=nw.value; savePass(S.pass); S.flash="Mot de passe modifié."; render(); }
+    catch(x){ err.textContent=x.message; } }},
+    el("h2",{},"Changer le mot de passe"),
+    el("div",{class:"field"},el("label",{for:"cur"},"Mot de passe actuel"),cur),
+    el("div",{class:"field"},el("label",{for:"new"},"Nouveau mot de passe"),nw),err,el("button",{class:"btn",type:"submit"},"Modifier")));
+}
+
+/* ---------- Démarrage ---------- */
+(async()=>{
+  try{ S.configured=(await rpc("admin_status")).configured; }catch(e){ S.error=e.message; render(); return; }
+  const p=loadPass();
+  if(p&&S.configured){ try{ S.pass=p; await refresh(); }catch(e){ S.pass=null; savePass(null); } }
+  render();
+})();
+</script>
+</body>
+</html>
