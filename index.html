@@ -73,6 +73,7 @@ p{margin:0}
 .bdg .nm{font-size:12px;font-weight:600;line-height:1.25}
 .bdg .pg{width:80%;height:4px;border-radius:2px;background:var(--line);overflow:hidden}
 .bdg .pg i{display:block;height:100%;background:var(--accent)}
+.pg.big{height:8px;border-radius:4px;background:var(--line);overflow:hidden}.pg.big i{display:block;height:100%;background:var(--accent);border-radius:4px}
 .btn.small{padding:10px 14px;font-size:14px}
 .format{align-self:flex-start;font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--accent);background:var(--accent-soft);padding:3px 10px;border-radius:99px}
 .choices.vf{flex-direction:row} .choices.vf .choice{flex:1;justify-content:center;font-weight:700;font-size:16px}
@@ -228,7 +229,7 @@ nav svg{display:block;margin:0 auto 3px;width:20px;height:20px}
   <button role="tab" data-tab="quiz" aria-selected="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6V14"/><circle cx="12" cy="17.5" r=".6" fill="currentColor"/></svg>Cette semaine</button>
   <button role="tab" data-tab="board" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20V12h4v8M10 20V6h4v14M16 20v-5h4v5"/></svg>Classement</button>
   <button role="tab" data-tab="forum" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/><path d="M9.5 10a2.5 2.5 0 1 1 3 2.4c-.5.2-.5.6-.5 1.1"/><circle cx="12" cy="16" r=".5" fill="currentColor"/></svg>Partage</button>
-  <button role="tab" data-tab="archive" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="9" r="6"/><path d="M8.5 14 7 22l5-3 5 3-1.5-8"/></svg>Parcours</button>
+  <button role="tab" data-tab="badges" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="9" r="6"/><path d="M8.5 14 7 22l5-3 5 3-1.5-8"/></svg>Badges</button>
 </div></nav>
 
 <script>
@@ -257,7 +258,7 @@ function saveAuth(a){ try{ a?localStorage.setItem("quiz-auth",JSON.stringify(a))
 /* ---------- Utilitaires ---------- */
 function fmt(iso){ return new Date(iso+"T12:00:00").toLocaleDateString("fr-FR",{day:"numeric",month:"long"}); }
 function el(tag,attrs={},...kids){ const e=document.createElement(tag); for(const [k,v] of Object.entries(attrs)){ if(k==="class") e.className=v; else if(k.startsWith("on")) e.addEventListener(k.slice(2),v); else if(k==="value") e.value=v; else if(v!==false&&v!=null) e.setAttribute(k,v===true?"":v); } for(const c of kids.flat(Infinity)){ if(c==null||c===false) continue; e.append(c.nodeType?c:document.createTextNode(String(c))); } return e; }
-function setTab(t){ S.tab=t; S.review=null; document.querySelectorAll("nav button").forEach(b=>b.setAttribute("aria-selected",b.dataset.tab===t)); render(); window.scrollTo(0,0); if(t==="board") loadBoard(); if(t==="archive") loadArchives(); if(t==="forum") loadForum(); }
+function setTab(t){ S.tab=t; S.review=null; document.querySelectorAll("nav button").forEach(b=>b.setAttribute("aria-selected",b.dataset.tab===t)); render(); window.scrollTo(0,0); if(t==="board") loadBoard(); if(t==="badges") loadBadges(); if(t==="quiz") loadArchives(); if(t==="forum") loadForum(); }
 document.querySelectorAll("nav button").forEach(b=>b.addEventListener("click",()=>setTab(b.dataset.tab)));
 
 /* ---------- Accès organisateur ----------
@@ -281,7 +282,7 @@ function render(){
   $nav.hidden=!S.auth;
   if(S.error){ $view.append(el("div",{class:"notice"},S.error),el("button",{class:"btn ghost",onclick:()=>{S.error=null;start();}},"Réessayer")); return; }
   if(!S.auth) return renderLogin();
-  if(S.tab==="quiz") renderQuiz(); else if(S.tab==="board") renderBoard(); else if(S.tab==="forum") renderForum(); else renderArchive();
+  if(S.tab==="quiz"){ if(S.review) renderReview(); else { renderQuiz(); renderHistory(); } } else if(S.tab==="board") renderBoard(); else if(S.tab==="forum") renderForum(); else renderBadges();
   updateDot();
 }
 
@@ -297,7 +298,7 @@ function renderLogin(){
     if(p.length<2){ err.textContent="Indique ton prénom."; return; }
     if(!/^\d{4}$/.test(c)){ err.textContent="Le code doit contenir 4 chiffres."; return; }
     btn.disabled=true; btn.textContent="Connexion…";
-    try{ const r=await rpc("join_quiz",{p_pseudo:p,p_pin:c}); S.auth={pseudo:r.pseudo,pin:c}; saveAuth(S.auth); await loadWeek(); loadBadges(); render(); }
+    try{ const r=await rpc("join_quiz",{p_pseudo:p,p_pin:c}); S.auth={pseudo:r.pseudo,pin:c}; saveAuth(S.auth); await loadWeek(); loadBadges(); loadArchives(); render(); }
     catch(x){ err.textContent=x.message; btn.disabled=false; btn.textContent="Entrer"; }
   }},
     el("h2",{},"Bienvenue dans le quiz"),
@@ -308,7 +309,7 @@ function renderLogin(){
     err,btn);
   $view.append(form);
 }
-function logout(){ stopTimer(); S.cur=null; S.badges=null; S.auth=null; saveAuth(null); S.mine=[]; S.qIndex=null; S.tab="quiz"; render(); }
+function logout(){ stopTimer(); S.cur=null; S.badges=null; S.archives=null; S.review=null; S.auth=null; saveAuth(null); S.mine=[]; S.qIndex=null; S.tab="quiz"; render(); }
 
 /* ---------- Semaine en cours ---------- */
 async function loadWeek(){
@@ -360,12 +361,12 @@ function renderQuiz(){
   if(done&&S.qIndex===null){
     const sc=mine.filter(m=>m.correct).length;
     card.append(el("div",{},el("p",{class:"muted"},trial?"Ton score à l'essai":"Ton score cette semaine"),el("div",{class:"score-big"},sc,el("span",{}," / "+n))),
-      el("p",{},sc===n?"Sans faute. Bravo.":sc>=0.7*n?"Beau score. Les corrections détaillées sont dans ton parcours.":"Relis les corrections dans ton parcours : elles serviront pour la suite."));
+      el("p",{},sc===n?"Sans faute. Bravo.":sc>=0.7*n?"Beau score. Les corrections détaillées sont juste en dessous.":"Relis les corrections : elles serviront pour la suite."));
     if(trial){
       card.append(el("button",{class:"btn",onclick:async()=>{ try{ await rpc("reset_trial",cred()); await switchMode("trial"); }catch(e){ S.flash=e.message; render(); } }},"Recommencer l'essai"),
         el("button",{class:"btn ghost",onclick:()=>switchMode("season")},"Revenir à la série de la semaine"));
     } else {
-      card.append(el("button",{class:"btn ghost",onclick:()=>{setTab("archive");openReview(w.id);}},"Voir les corrections"),
+      card.append(el("button",{class:"btn ghost",onclick:()=>{openReview(w.id);window.scrollTo(0,0);}},"Voir les corrections"),
         el("button",{class:"btn",onclick:()=>setTab("board")},"Voir le classement"),
         el("p",{class:"muted",style:"font-size:13px;text-align:center"},`${w.finished} participant${w.finished>1?"s ont":" a"} terminé la série.`));
     }
@@ -376,7 +377,7 @@ function renderQuiz(){
     const i=S.qIndex, a=mine[i], last=mine.length>=n;
     card.append(el("div",{class:"qnum"},el("span",{},`Question ${i+1} sur ${n}`),levelTag(i,n)),el("div",{class:"question"},a.text),byLine(a.by));
     card.append(...feedbackBlock(a));
-    card.append(el("button",{class:"btn",disabled:S.busy,onclick:async()=>{ if(last){ S.qIndex=null; try{ if(!trial) S.season=S.week=await rpc("current_week")||S.week; }catch(e){} render(); } else startQ(i+1); }},last?"Voir mon score":"Question suivante"));
+    card.append(el("button",{class:"btn",disabled:S.busy,onclick:async()=>{ if(last){ S.qIndex=null; try{ if(!trial) S.season=S.week=await rpc("current_week")||S.week; }catch(e){} render(); if(!trial) loadArchives(); } else startQ(i+1); }},last?"Voir mon score":"Question suivante"));
     $view.append(card); return;
   }
   const i=mine.length;
@@ -501,27 +502,28 @@ function renderPrizes(){
 }
 
 /* ---------- Archives et corrections ---------- */
-async function loadArchives(){ try{ await loadBadges(); S.archives=await rpc("archives",cred()); }catch(e){ S.archives={error:e.message}; } if(S.tab==="archive") render(); }
+async function loadArchives(){ try{ S.archives=await rpc("archives",cred()); }catch(e){ S.archives={error:e.message}; } if(S.tab==="quiz"&&!S.review) render(); }
 async function openReview(id){ S.review={loading:true}; render(); try{ S.review=await rpc("corrections",{...cred(),p_week:id}); }catch(e){ S.review={error:e.message}; } render(); }
-function renderArchive(){
-  if(S.review){
-    const back=el("button",{class:"btn ghost",onclick:()=>{S.review=null;render();}},"← Toutes les semaines");
-    if(S.review.loading){ $view.append(el("div",{class:"notice"},"Chargement…")); return; }
-    if(S.review.error){ $view.append(el("div",{class:"card"},back,el("div",{class:"notice"},S.review.error))); return; }
-    const r=S.review, card=el("div",{class:"card"},back,el("h3",{},r.label),el("h2",{},r.theme));
-    r.items.forEach((it,i)=>{
-      card.append(el("div",{class:"review"},el("span",{class:"tag "+(it.choice==null&&it.given==null?"":it.correct?"ok":"bad")},it.choice==null&&it.given==null?"Non répondu":it.choice===-1?"Temps écoulé":it.correct?"Juste":"Faux"),
-        el("strong",{},`${i+1}. ${it.text}`),byLine(it.by),...feedbackBlock(it))); });
-    $view.append(card); return;
-  }
-  renderBadges();
-  if(!S.archives){ $view.append(el("div",{class:"notice"},"Chargement des archives…")); return; }
-  if(S.archives.error){ $view.append(el("div",{class:"notice"},S.archives.error)); return; }
-  if(!S.archives.length){ $view.append(el("div",{class:"notice"},"Aucune semaine pour l'instant.")); return; }
-  $view.append(el("div",{class:"card"},el("h2",{},"Mes séries"),el("div",{},S.archives.map(w=>
+function renderReview(){
+  const back=el("button",{class:"btn ghost",onclick:()=>{S.review=null;render();}},"← Retour");
+  if(S.review.loading){ $view.append(el("div",{class:"notice"},"Chargement…")); return; }
+  if(S.review.error){ $view.append(el("div",{class:"card"},back,el("div",{class:"notice"},S.review.error))); return; }
+  const r=S.review, card=el("div",{class:"card"},back,el("h3",{},r.label),el("h2",{},r.theme));
+  r.items.forEach((it,i)=>{
+    card.append(el("div",{class:"review"},el("span",{class:"tag "+(it.choice==null&&it.given==null?"":it.correct?"ok":"bad")},it.choice==null&&it.given==null?"Non répondu":it.choice===-1?"Temps écoulé":it.correct?"Juste":"Faux"),
+      el("strong",{},`${i+1}. ${it.text}`),byLine(it.by),...feedbackBlock(it))); });
+  card.append(back.cloneNode(true)); card.lastChild.onclick=()=>{S.review=null;render();window.scrollTo(0,0);};
+  $view.append(card);
+}
+// Historique des séries, sous la série de la semaine (masqué pendant une question)
+function renderHistory(){
+  if(S.mode==="trial"||S.cur||S.qIndex!==null) return;
+  const list=Array.isArray(S.archives)?S.archives.filter(w=>!S.week||w.id!==S.week.id||(S.mine||[]).length>=S.week.count):[];
+  if(!list.length) return;
+  $view.append(el("div",{class:"card"},el("h2",{},"Mes séries"),el("div",{},list.map(w=>
     el("div",{class:"archive"},el("div",{style:"min-width:0"},el("strong",{},`${w.label} · ${w.theme}`),
       el("div",{class:"muted",style:"font-size:13px"},w.answered?`Ton score : ${w.score} / ${w.total}`:"Pas joué")),
-      el("button",{onclick:()=>openReview(w.id)},"Corrections"))))));
+      el("button",{onclick:()=>{openReview(w.id);window.scrollTo(0,0);}},"Corrections"))))));
 }
 
 function byLine(by){ return by?el("div",{class:"by"},icon("feather"),`Question proposée par ${by}`):document.createTextNode(""); }
@@ -644,6 +646,7 @@ function icon(name){ const t=document.createElement("template"); t.innerHTML='<s
 const unlocked=b=>b.progress>=b.target;
 async function loadBadges(){ try{ const list=await rpc("my_badges",cred()); const before=S.badges; S.badges=list;
     if(before){ const old=new Set(before.filter(unlocked).map(b=>b.id)); const fresh=list.filter(b=>unlocked(b)&&!old.has(b.id)); if(fresh.length) toast(fresh[0]); }
+    if(S.tab==="badges") render();
   }catch(e){} }
 function toast(b){ const t=el("div",{class:"toast",role:"status"},el("div",{class:"medal"},icon(b.icon)),el("div",{},el("b",{},"Badge débloqué"),b.name));
   document.body.append(t); setTimeout(()=>t.remove(),4500); }
@@ -652,16 +655,16 @@ function badgeButton(b){ const on=unlocked(b);
     el("div",{class:"medal"},icon(b.icon)),el("div",{class:"nm"},b.name),
     on?null:el("div",{class:"pg"},el("i",{style:`width:${Math.round(100*b.progress/b.target)}%`}))); }
 function renderBadges(){
-  const list=S.badges; if(!list) return;
-  const n=list.filter(unlocked).length, open=list.find(b=>b.id===S.badgeOpen);
+  const list=S.badges; if(!list){ $view.append(el("div",{class:"notice"},"Chargement des badges…")); return; }
+  const n=list.filter(unlocked).length;
   const cats=[...new Set(list.map(b=>b.cat||"Badges"))];
   $view.append(el("div",{class:"card"},el("div",{class:"week-head"},el("h2",{},"Mes badges"),el("span",{class:"pill"},`${n} / ${list.length}`)),
-    !S.allBadges?el("div",{class:"badges"},list.filter(unlocked).map(badgeButton)):null,
-    !S.allBadges&&!n?el("p",{class:"muted"},"Aucun badge pour l'instant : réponds à ta première question pour débloquer le premier."):null,
-    el("button",{class:"btn ghost",onclick:()=>{S.allBadges=!S.allBadges;S.badgeOpen=null;render();}},S.allBadges?"Masquer les badges à débloquer":`Voir les ${list.length} badges et comment les débloquer`),
-    open?el("div",{class:"bdg-detail"},el("strong",{},open.name),el("p",{},open.desc+(unlocked(open)?" : débloqué.":` (${open.progress} / ${open.target}).`))):null,
-    !S.allBadges?null:cats.map(c=>{ const items=list.filter(b=>(b.cat||"Badges")===c); return el("div",{class:"bcat"},
-      el("h3",{},`${c} · ${items.filter(unlocked).length}/${items.length}`),el("div",{class:"badges"},items.map(badgeButton))); })));
+    el("div",{class:"pg big"},el("i",{style:`width:${Math.round(100*n/list.length)}%`})),
+    el("p",{class:"muted",style:"font-size:13px"},n?"Touche un badge pour voir comment il se débloque.":"Aucun badge pour l'instant : réponds à ta première question pour débloquer le premier. Touche un badge pour voir comment l'obtenir.")));
+  cats.forEach(c=>{ const items=list.filter(b=>(b.cat||"Badges")===c).sort((x,y)=>unlocked(y)-unlocked(x)), open=items.find(b=>b.id===S.badgeOpen);
+    $view.append(el("div",{class:"card bcat"},el("div",{class:"week-head"},el("h3",{},c),el("span",{class:"pill"},`${items.filter(unlocked).length} / ${items.length}`)),
+      el("div",{class:"badges"},items.map(badgeButton)),
+      open?el("div",{class:"bdg-detail"},el("strong",{},open.name),el("p",{},open.desc+(unlocked(open)?" : débloqué.":` (${open.progress} / ${open.target}).`))):null)); });
 }
 
 /* ---------- Proposer une question ---------- */
@@ -744,7 +747,7 @@ async function start(){
   if(SUPABASE_URL.includes("VOTRE-PROJET")){ S.error="L'appli n'est pas encore reliée à sa base de données : renseigne SUPABASE_URL et SUPABASE_KEY en haut du fichier."; render(); return; }
   S.auth=loadAuth();
   checkForum();
-  if(S.auth){ try{ await loadWeek(); loadBadges(); }catch(e){ if(/Code|Prénom|essais/.test(e.message)){ S.auth=null; saveAuth(null); } else S.error=e.message; } }
+  if(S.auth){ try{ await loadWeek(); loadBadges(); loadArchives(); }catch(e){ if(/Code|Prénom|essais/.test(e.message)){ S.auth=null; saveAuth(null); } else S.error=e.message; } }
   render();
 }
 document.addEventListener("visibilitychange",async()=>{ if(document.visibilityState==="visible"&&S.auth&&!S.busy&&S.qIndex===null){ try{ await loadWeek(); render(); }catch(e){} } });
