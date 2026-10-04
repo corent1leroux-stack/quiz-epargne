@@ -150,6 +150,8 @@ a.q{color:var(--accent);text-decoration:underline;text-underline-offset:3px}
 .prize{display:grid;grid-template-columns:34px 1fr;gap:12px;align-items:center}
 .prize .medal{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font:800 15px var(--display);background:var(--accent-soft);color:var(--accent)}
 .prize.r1 .medal{background:var(--gold);color:#fff}
+.prize.r2 .medal{background:var(--silver);color:#fff}
+.prize.r3 .medal{background:var(--bronze);color:#fff}
 .prize span{font-weight:500;min-width:0}
 .btn{all:unset;box-sizing:border-box;text-align:center;padding:14px 18px;border-radius:12px;background:var(--accent);color:var(--accent-ink);font:600 15px var(--body);cursor:pointer}
 .btn:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
@@ -278,7 +280,7 @@ function renderLogin(){
     catch(x){ err.textContent=x.message; btn.disabled=false; btn.textContent="Entrer"; }
   }},
     el("h2",{},"Bienvenue dans le quiz"),
-    el("p",{},"Chaque semaine, 5 questions sur l'épargne et les placements. Un point par bonne réponse, et un classement général en fin d'année."),
+    el("p",{},"Chaque semaine, 10 questions sur l'épargne, les placements et le patrimoine, de la plus facile à la plus difficile, avec 30 secondes pour répondre. Un point par bonne réponse, et un classement en fin de saison, le 28 mars."),
     el("div",{class:"field"},el("label",{for:"pseudo"},"Ton prénom"),name),
     el("div",{class:"field"},el("label",{for:"pin"},"Ton code secret"),pin),
     el("p",{class:"muted",style:"font-size:13px"},"Première fois ? Choisis un code à 4 chiffres et retiens-le : il te servira pour te reconnecter sur un autre appareil."),
@@ -325,7 +327,6 @@ function renderQuiz(){
       el("p",{},sc===n?"Sans faute. Bravo.":sc>=0.7*n?"Beau score. Les corrections détaillées sont dans ton parcours.":"Relis les corrections dans ton parcours : elles serviront pour la suite."),
       el("button",{class:"btn ghost",onclick:()=>{setTab("archive");openReview(w.id);}},"Voir les corrections"),
       el("button",{class:"btn",onclick:()=>setTab("board")},"Voir le classement"),
-      el("button",{class:"ghost-sm",onclick:()=>{S.proposeOpen=true;setTab("archive");}},"Une idée de question ? Propose-la"),
       el("p",{class:"muted",style:"font-size:13px;text-align:center"},`${w.finished} participant${w.finished>1?"s ont":" a"} terminé la série.`));
     $view.append(card); return;
   }
@@ -382,7 +383,7 @@ function renderBoard(){
   if(!rows.length){ $view.append(el("div",{class:"card"},el("h2",{},"Classement"),el("p",{class:"muted"},"Personne n'a encore joué. Le premier qui répond prend la tête."))); renderPrizes(); return; }
   const me=S.auth.pseudo.toLowerCase(), top=rows.slice(0,3), order=[top[1],top[0],top[2]];
   $view.append(
-    el("div",{class:"card"},el("h3",{},"Classement de la saison · jusqu'au 28 mars"),
+    el("div",{class:"card"},el("h3",{},"Classement général"),
       el("div",{class:"podium"},order.map((r,j)=>r?el("div",{class:"step s"+[2,1,3][j]},el("div",{class:"nm"},r.pseudo),el("div",{class:"block"},r.points)):el("div")))),
     el("div",{class:"card"},el("p",{class:"muted",style:"font-size:13px"},"Touche un joueur pour voir ses badges."),el("ol",{class:"board"},rows.map(r=>[el("li",{class:"row"+(r.rank===1?" p1":"")+(r.pseudo.toLowerCase()===me?" mine":""),tabindex:"0",onclick:()=>openPlayer(r.pseudo)},
       el("div",{class:"rank"},r.rank),
@@ -407,7 +408,7 @@ function renderPrizes(){
 }
 
 /* ---------- Archives et corrections ---------- */
-async function loadArchives(){ try{ await loadBadges(); loadProposals(); S.archives=await rpc("archives",cred()); }catch(e){ S.archives={error:e.message}; } if(S.tab==="archive") render(); }
+async function loadArchives(){ try{ await loadBadges(); S.archives=await rpc("archives",cred()); }catch(e){ S.archives={error:e.message}; } if(S.tab==="archive") render(); }
 async function openReview(id){ S.review={loading:true}; render(); try{ S.review=await rpc("corrections",{...cred(),p_week:id}); }catch(e){ S.review={error:e.message}; } render(); }
 function renderArchive(){
   if(S.review){
@@ -423,7 +424,6 @@ function renderArchive(){
         it.tip?el("div",{class:"tip"},el("b",{},"À retenir"),it.tip):null)); });
     $view.append(card); return;
   }
-  renderPropose();
   renderBadges();
   if(!S.archives){ $view.append(el("div",{class:"notice"},"Chargement des archives…")); return; }
   if(S.archives.error){ $view.append(el("div",{class:"notice"},S.archives.error)); return; }
@@ -448,7 +448,7 @@ function writeSeen(n){ try{ localStorage.setItem("quiz-forum-seen",String(n)); }
 let forumTotal=0;
 async function checkForum(){ try{ forumTotal=await rpc("forum_count"); updateDot(); }catch(e){} }
 function updateDot(){ const b=document.querySelector('nav button[data-tab="forum"]'); if(!b) return; const old=b.querySelector(".dot"); if(old) old.remove(); if(S.tab!=="forum"&&forumTotal>readSeen()) b.append(el("span",{class:"dot","aria-label":"nouveautés"})); }
-async function loadForum(){ try{ S.forum=await rpc("list_posts",cred()); forumTotal=S.forum.reduce((n,f)=>n+1+(f.answer?1:0)+(f.comments?f.comments.length:0),0); writeSeen(Math.max(forumTotal,readSeen())); }catch(e){ S.forum={error:e.message}; } if(S.tab==="forum") render(); }
+async function loadForum(){ loadProposals(); try{ S.forum=await rpc("list_posts",cred()); forumTotal=S.forum.reduce((n,f)=>n+1+(f.answer?1:0)+(f.comments?f.comments.length:0),0); writeSeen(Math.max(forumTotal,readSeen())); }catch(e){ S.forum={error:e.message}; } if(S.tab==="forum") render(); }
 function when(ts){ return new Date(ts).toLocaleDateString("fr-FR",{day:"numeric",month:"long"}); }
 const KINDS={question:"Question",lecture:"Lecture",video:"Vidéo",lien:"Lien"};
 function replyForm(f){
@@ -461,9 +461,13 @@ function replyForm(f){
     el("button",{class:"ghost-sm",type:"button",onclick:()=>{S.replyTo=null;render();}},"Annuler"),err);
 }
 function domain(u){ try{ return new URL(u).hostname.replace(/^www\./,""); }catch(e){ return ""; } }
+function composeChips(k){
+  return el("div",{class:"chips",role:"tablist"},[...Object.entries(KINDS),["quiz","Question pour le quiz"]].map(([key,lab])=>el("button",{type:"button","aria-selected":k===key?"true":"false",onclick:()=>{S.compose=key;render();}},lab)));
+}
 function renderForum(){
   S.compose=S.compose||"question"; S.filter=S.filter||"tout";
   const k=S.compose;
+  if(k==="quiz"){ renderPropose(); renderPosts(); return; }
   const D=S.draft=S.draft||{title:"",url:"",body:""};
   const title=el("input",{id:"p-title",type:"text",maxlength:"150",value:D.title,oninput:e=>D.title=e.target.value,placeholder:k==="lecture"?"Ex. La Psychologie de l'argent, Morgan Housel":k==="video"?"Ex. Les intérêts composés en 5 minutes":"Ex. Simulateur officiel de l'impôt sur le revenu"});
   const url=el("input",{id:"p-url",type:"url",inputmode:"url",placeholder:"https://…",value:D.url,oninput:e=>D.url=e.target.value});
@@ -475,13 +479,16 @@ function renderForum(){
         await loadForum(); loadBadges(); }
       catch(x){ err.textContent=x.message; btn.disabled=false; } }},
     el("h2",{},"Partager"),
-    el("div",{class:"chips",role:"tablist"},Object.entries(KINDS).map(([key,lab])=>el("button",{type:"button","aria-selected":k===key?"true":"false",onclick:()=>{S.compose=key;render();}},lab))),
+    composeChips(k),
     el("p",{class:"muted",style:"font-size:13px"},k==="question"?"Une question sur un placement, un cas client, une notion du quiz : elle est publiée tout de suite, sous ton prénom, et tout le monde peut y répondre.":"Un livre, une vidéo, un article ou un outil utile : il est publié tout de suite, sous ton prénom."),
     k!=="question"?el("div",{class:"field"},el("label",{for:"p-title"},"Titre"),title):null,
     k!=="question"?el("div",{class:"field"},el("label",{for:"p-url"},k==="lecture"?"Lien (facultatif)":"Lien"),url):null,
     el("div",{class:"field"},el("label",{for:"p-body"},k==="question"?"Ta question":"Ton avis (facultatif)"),body),
     S.flash?el("p",{class:"okmsg"},S.flash):null, err, btn));
   S.flash=null;
+  renderPosts();
+}
+function renderPosts(){
   if(!S.forum){ $view.append(el("div",{class:"notice"},"Chargement…")); return; }
   if(S.forum.error){ $view.append(el("div",{class:"notice"},S.forum.error)); return; }
   const list=S.forum.filter(f=>S.filter==="tout"||f.kind===S.filter);
@@ -571,16 +578,14 @@ function renderBadges(){
 async function loadProposals(){
   try{ const [mine,themes]=await Promise.all([rpc("my_proposals",cred()),rpc("future_themes")]); S.proposals=mine; S.themes=themes; }
   catch(e){ S.proposals={error:e.message}; }
-  if(S.tab==="archive"&&!S.review) render();
+  if(S.tab==="forum") render();
 }
 const PSTATUS={pending:"En attente",accepted:"Retenue",rejected:"Non retenue"};
 function renderPropose(){
   const P=S.pdraft=S.pdraft||{theme:"",q:"",choices:["","","",""],answer:null,explain:"",tip:""};
-  const card=el("div",{class:"card propose"},el("h2",{},"Propose ta question"),
-    el("p",{class:"muted"},"Une question qui t'a fait réfléchir, un piège fréquent en rendez-vous ? Propose-la : si elle est retenue, elle sera jouée par toute l'agence avec ton prénom."));
-  if(!S.proposeOpen){
-    card.append(el("button",{class:"btn",onclick:()=>{S.proposeOpen=true;render();}},"Proposer une question"));
-  } else {
+  const card=el("div",{class:"card propose"},el("h2",{},"Partager"),composeChips("quiz"),
+    el("p",{class:"muted",style:"font-size:13px"},"Une question qui t'a fait réfléchir, un piège fréquent en rendez-vous ? Propose-la pour le quiz : si elle est retenue, elle sera jouée par toute l'agence avec ton prénom. Elle n'est pas publiée ici, pour ne pas dévoiler la réponse."));
+  {
     const theme=el("select",{id:"pp-theme",onchange:e=>P.theme=e.target.value},el("option",{value:""},"Thème libre"),
       (Array.isArray(S.themes)?S.themes:[]).map(t=>{ const o=el("option",{value:t.theme},`${t.theme} (à partir du ${fmt(t.start)})`); if(P.theme===t.theme) o.selected=true; return o; }));
     const q=el("textarea",{id:"pp-q",maxlength:"400",placeholder:"Ex. Quel est le plafond du PEA jeune ?",value:P.q,oninput:e=>P.q=e.target.value});
@@ -592,13 +597,13 @@ function renderPropose(){
         if(P.answer===null){ err.textContent="Coche la bonne réponse."; return; }
         btn.disabled=true;
         try{ await rpc("propose_question",{...cred(),p_theme:P.theme,p_q:P.q,p_choices:P.choices,p_answer:P.answer,p_explain:P.explain,p_tip:""});
-          S.pdraft=null; S.proposeOpen=false; S.flash="Merci ! Ta proposition est envoyée : tu verras ici si elle est retenue."; await loadProposals(); loadBadges(); }
+          S.pdraft=null; S.flash="Merci ! Ta proposition est envoyée : tu verras ci-dessous si elle est retenue."; await loadProposals(); loadBadges(); }
         catch(x){ err.textContent=x.message; btn.disabled=false; } }},
       el("div",{class:"field"},el("label",{for:"pp-theme"},"Thème"),theme),
       el("div",{class:"field"},el("label",{for:"pp-q"},"Question"),q),
       el("div",{class:"field"},el("label",{},"Les 4 réponses (coche la bonne)"),opts),
       el("div",{class:"field"},el("label",{for:"pp-ex"},"Explication"),ex),
-      err,btn,el("button",{class:"btn ghost",type:"button",onclick:()=>{S.proposeOpen=false;render();}},"Annuler")));
+      err,btn));
   }
   if(S.flash){ card.append(el("p",{class:"okmsg"},S.flash)); S.flash=null; }
   const list=Array.isArray(S.proposals)?S.proposals:[];
