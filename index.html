@@ -22,7 +22,7 @@ const SUPABASE_KEY = "sb_publishable_4TEnAMm1Uu_MON6riVHtiw_tHZ1xA2v";
 :root{
   --bg:#EEF2EF; --surface:#FFFFFF; --ink:#13241D; --muted:#5A6B63; --line:#D7E0DA;
   --accent:#0B6E55; --accent-ink:#FFFFFF; --accent-soft:#DDEFE8;
-  --gold:#B7790C; --bronze:#A8693B; --silver:#7D8C93; --ok:#1F8A4C; --ok-soft:#E1F3E8; --bad:#C2412D; --bad-soft:#FBE7E3;
+  --gold:#B7790C; --link:#2D5A8C; --bronze:#A8693B; --silver:#7D8C93; --ok:#1F8A4C; --ok-soft:#E1F3E8; --bad:#C2412D; --bad-soft:#FBE7E3;
   --display:"Bricolage Grotesque",ui-rounded,system-ui,sans-serif;
   --body:"Instrument Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
   color-scheme:light;
@@ -30,7 +30,7 @@ const SUPABASE_KEY = "sb_publishable_4TEnAMm1Uu_MON6riVHtiw_tHZ1xA2v";
 @media (prefers-color-scheme:dark){:root{
   --bg:#0E1613; --surface:#16211D; --ink:#E4EDE8; --muted:#90A39A; --line:#26352F;
   --accent:#3FC79F; --accent-ink:#082019; --accent-soft:#173A30;
-  --gold:#C99A3A; --bronze:#A0673F; --silver:#6F8089; --ok:#4FCB83; --ok-soft:#163323; --bad:#F07A66; --bad-soft:#3A1E19; color-scheme:dark}}
+  --gold:#C99A3A; --link:#8DB4E2; --bronze:#A0673F; --silver:#6F8089; --ok:#4FCB83; --ok-soft:#163323; --bad:#F07A66; --bad-soft:#3A1E19; color-scheme:dark}}
 *{box-sizing:border-box}
 [hidden]{display:none!important}
 html,body{background:var(--bg);margin:0}
@@ -79,6 +79,30 @@ p{margin:0}
 .toast .medal svg{width:20px;height:20px}
 .toast b{display:block;font-size:12px;text-transform:uppercase;letter-spacing:.08em;opacity:.75}
 @keyframes pop{from{transform:translateY(12px);opacity:0}to{transform:none;opacity:1}}
+.timer{display:flex;align-items:center;gap:10px}
+.timer .track{flex:1;height:8px;border-radius:4px;background:var(--line);overflow:hidden}
+.timer .bar{height:100%;width:100%;background:var(--accent);border-radius:4px;transition:width .25s linear}
+.timer .bar.hurry{background:var(--bad)}
+.timer span{font:700 14px var(--body);font-variant-numeric:tabular-nums;min-width:36px;text-align:right}
+.ready{display:flex;gap:14px;align-items:center;padding:6px 0}
+.ready .clock{flex:none;width:48px;height:48px;border-radius:50%;display:grid;place-items:center;background:var(--accent-soft);color:var(--accent)}
+.ready .clock svg{width:24px;height:24px}
+.seg,.chips{display:flex;gap:6px;flex-wrap:wrap}
+.seg{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:4px}
+.seg button,.chips button{all:unset;cursor:pointer;flex:1;text-align:center;padding:9px 10px;border-radius:9px;font:600 13px var(--body);color:var(--muted)}
+.chips button{flex:none;border:1.5px solid var(--line);border-radius:99px;padding:7px 14px}
+.chips.small button{padding:5px 12px;font-size:12px}
+.seg button[aria-selected=true]{background:var(--accent-soft);color:var(--accent)}
+.chips button[aria-selected=true]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.seg button:focus-visible,.chips button:focus-visible,.like:focus-visible{outline:2px solid var(--accent)}
+.kind{display:inline-flex;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;padding:2px 8px;border-radius:99px;background:var(--line);color:var(--ink)}
+.kind.k-question{background:var(--accent-soft);color:var(--accent)} .kind.k-lecture{background:rgba(183,121,12,.16);color:var(--gold)} .kind.k-video{background:var(--bad-soft);color:var(--bad)} .kind.k-lien{background:rgba(70,110,170,.16);color:var(--link)}
+a.q{color:var(--accent);text-decoration:underline;text-underline-offset:3px}
+.thread .desc{font-size:14px}
+.like{all:unset;cursor:pointer;align-self:flex-start;display:inline-flex;gap:6px;align-items:center;font:600 13px var(--body);color:var(--muted);padding:6px 10px;border-radius:99px;border:1.5px solid var(--line)}
+.like svg{width:16px;height:16px}
+.like.on{color:var(--accent);border-color:var(--accent);background:var(--accent-soft)}
+.okmsg{color:var(--ok);font-size:14px;font-weight:600}
 .thread .pending{font-size:13px;color:var(--gold);font-weight:600}
 .question{font:600 19px/1.35 var(--display);letter-spacing:-.01em;text-wrap:pretty}
 .choices{display:flex;flex-direction:column;gap:10px}
@@ -143,7 +167,7 @@ nav svg{display:block;margin:0 auto 3px;width:20px;height:20px}
 <body>
 <div class="app">
   <header>
-    <div class="brand">Quiz Épargne<small>5 questions par semaine</small></div>
+    <div class="brand">Quiz Épargne<small>10 questions par semaine</small></div>
     <div class="who" id="who"></div>
   </header>
   <main id="view"><div class="notice">Chargement…</div></main>
@@ -151,14 +175,14 @@ nav svg{display:block;margin:0 auto 3px;width:20px;height:20px}
 <nav id="nav" hidden><div class="tabs" role="tablist">
   <button role="tab" data-tab="quiz" aria-selected="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6V14"/><circle cx="12" cy="17.5" r=".6" fill="currentColor"/></svg>Cette semaine</button>
   <button role="tab" data-tab="board" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20V12h4v8M10 20V6h4v14M16 20v-5h4v5"/></svg>Classement</button>
-  <button role="tab" data-tab="forum" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/><path d="M9.5 10a2.5 2.5 0 1 1 3 2.4c-.5.2-.5.6-.5 1.1"/><circle cx="12" cy="16" r=".5" fill="currentColor"/></svg>Questions</button>
+  <button role="tab" data-tab="forum" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/><path d="M9.5 10a2.5 2.5 0 1 1 3 2.4c-.5.2-.5.6-.5 1.1"/><circle cx="12" cy="16" r=".5" fill="currentColor"/></svg>Partage</button>
   <button role="tab" data-tab="archive" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="9" r="6"/><path d="M8.5 14 7 22l5-3 5 3-1.5-8"/></svg>Parcours</button>
 </div></nav>
 
 <script>
 const L=["A","B","C","D"];
 const $view=document.getElementById("view"), $who=document.getElementById("who"), $nav=document.getElementById("nav");
-const S={badges:null,badgeOpen:null,forum:null,forumSeen:0,prizes:null,auth:null,tab:"quiz",week:null,nextStart:null,mine:[],qIndex:null,busy:false,board:null,archives:null,review:null,error:null};
+const S={cur:null,pending:null,phase:null,boards:null,compose:null,filter:null,flash:null,badges:null,badgeOpen:null,forum:null,forumSeen:0,prizes:null,auth:null,tab:"quiz",week:null,nextStart:null,mine:[],qIndex:null,busy:false,board:null,archives:null,review:null,error:null};
 
 /* ---------- Accès à la base (fonctions Supabase) ---------- */
 async function rpc(fn,args={}){
@@ -180,7 +204,7 @@ function saveAuth(a){ try{ a?localStorage.setItem("quiz-auth",JSON.stringify(a))
 
 /* ---------- Utilitaires ---------- */
 function fmt(iso){ return new Date(iso+"T12:00:00").toLocaleDateString("fr-FR",{day:"numeric",month:"long"}); }
-function el(tag,attrs={},...kids){ const e=document.createElement(tag); for(const [k,v] of Object.entries(attrs)){ if(k==="class") e.className=v; else if(k.startsWith("on")) e.addEventListener(k.slice(2),v); else if(v!==false&&v!=null) e.setAttribute(k,v===true?"":v); } for(const c of kids.flat()){ if(c==null||c===false) continue; e.append(c.nodeType?c:document.createTextNode(String(c))); } return e; }
+function el(tag,attrs={},...kids){ const e=document.createElement(tag); for(const [k,v] of Object.entries(attrs)){ if(k==="class") e.className=v; else if(k.startsWith("on")) e.addEventListener(k.slice(2),v); else if(k==="value") e.value=v; else if(v!==false&&v!=null) e.setAttribute(k,v===true?"":v); } for(const c of kids.flat()){ if(c==null||c===false) continue; e.append(c.nodeType?c:document.createTextNode(String(c))); } return e; }
 function setTab(t){ S.tab=t; S.review=null; document.querySelectorAll("nav button").forEach(b=>b.setAttribute("aria-selected",b.dataset.tab===t)); render(); window.scrollTo(0,0); if(t==="board") loadBoard(); if(t==="archive") loadArchives(); if(t==="forum") loadForum(); }
 document.querySelectorAll("nav button").forEach(b=>b.addEventListener("click",()=>setTab(b.dataset.tab)));
 
@@ -232,74 +256,120 @@ function renderLogin(){
     err,btn);
   $view.append(form);
 }
-function logout(){ S.badges=null; S.auth=null; saveAuth(null); S.mine=[]; S.qIndex=null; S.tab="quiz"; render(); }
+function logout(){ stopTimer(); S.cur=null; S.badges=null; S.auth=null; saveAuth(null); S.mine=[]; S.qIndex=null; S.tab="quiz"; render(); }
 
 /* ---------- Semaine en cours ---------- */
 async function loadWeek(){
   S.week=await rpc("current_week");
-  if(!S.week) S.nextStart=await rpc("next_week_start");
-  S.mine=S.week? await rpc("my_week",{...cred(),p_week:S.week.id}) : [];
+  if(!S.week){ S.nextStart=await rpc("next_week_start"); S.mine=[]; S.pending=null; return; }
+  const r=await rpc("my_week",{...cred(),p_week:S.week.id});
+  S.mine=r.answers||[]; S.pending=r.pending?r.pending.q:null;
+}
+let timerId=null;
+function stopTimer(){ if(timerId){ clearInterval(timerId); timerId=null; } }
+function remaining(){ return S.cur? Math.max(0,S.cur.limit-(Date.now()-S.cur.t0)/1000) : 0; }
+function tick(){
+  const r=remaining(), bar=document.getElementById("tbar"), txt=document.getElementById("tsec");
+  if(bar){ bar.style.width=(100*r/S.cur.limit)+"%"; bar.classList.toggle("hurry",r<=10); }
+  if(txt) txt.textContent=Math.ceil(r)+" s";
+  if(r<=0&&!S.busy){ stopTimer(); answer(S.cur.q,-1); }
+}
+async function startQ(i){
+  if(S.busy) return; S.busy=true; render();
+  try{ const r=await rpc("start_question",{...cred(),p_week:S.week.id,p_q:i});
+    S.cur={...r,t0:Date.now()-r.elapsed*1000}; S.pending=i; S.qIndex=null;
+    stopTimer(); timerId=setInterval(tick,250);
+  }catch(e){ S.flash=e.message; }
+  S.busy=false; render(); tick();
 }
 function renderQuiz(){
   const w=S.week;
   if(!w){ $view.append(el("div",{class:"card"},el("h2",{},"Pas de série ouverte"),el("p",{class:"muted"},S.nextStart?`Prochaine série le ${fmt(S.nextStart)}.`:"Les prochaines questions arrivent bientôt."))); return; }
-  const n=w.questions.length, mine=S.mine, done=mine.length>=n;
+  const n=w.count, mine=S.mine, done=mine.length>=n;
   const card=el("div",{class:"card"},
     el("div",{class:"week-head"},el("div",{},el("h3",{},w.label),el("h2",{},w.theme)),el("span",{class:"pill"},`Jusqu'au ${fmt(w.end)}`)),
-    el("div",{class:"dots"},w.questions.map((q,i)=>el("span",{class:i<mine.length?(mine[i].correct?"ok":"bad"):(i===mine.length&&!done?"cur":"")}))));
+    el("div",{class:"dots"},Array.from({length:n},(x,i)=>el("span",{class:i<mine.length?(mine[i].correct?"ok":"bad"):(i===mine.length&&!done?"cur":"")}))));
+  if(S.flash){ card.append(el("p",{class:"error"},S.flash)); S.flash=null; }
   if(done&&S.qIndex===null){
     const sc=mine.filter(m=>m.correct).length;
     card.append(el("div",{},el("p",{class:"muted"},"Ton score cette semaine"),el("div",{class:"score-big"},sc,el("span",{}," / "+n))),
-      el("p",{},sc===n?"Sans faute. Bravo.":sc>=3?"Bon score. Les corrections détaillées sont dans les archives.":"Relis les corrections dans les archives : elles serviront pour la suite."),
+      el("p",{},sc===n?"Sans faute. Bravo.":sc>=0.7*n?"Beau score. Les corrections détaillées sont dans ton parcours.":"Relis les corrections dans ton parcours : elles serviront pour la suite."),
       el("button",{class:"btn ghost",onclick:()=>{setTab("archive");openReview(w.id);}},"Voir les corrections"),
       el("button",{class:"btn",onclick:()=>setTab("board")},"Voir le classement"),
       el("p",{class:"muted",style:"font-size:13px;text-align:center"},`${w.finished} participant${w.finished>1?"s ont":" a"} terminé la série.`));
     $view.append(card); return;
   }
-  const i=S.qIndex!==null?S.qIndex:mine.length, q=w.questions[i], a=mine[i];
-  card.append(el("div",{class:"qnum"},el("span",{},`Question ${i+1} sur ${n}`),levelTag(i)),el("div",{class:"question"},q.q));
-  card.append(el("div",{class:"choices"},q.choices.map((c,k)=>{
-    let cls="choice"; if(a){ if(k===a.answer) cls+=" right"; else if(k===a.choice) cls+=" wrong"; }
-    return el("button",{class:cls,disabled:!!a||S.busy,onclick:()=>answer(i,k)},el("span",{class:"k"},L[k]),el("span",{},c));
-  })));
-  if(a){
-    card.append(el("div",{class:"explain"},el("b",{},a.correct?"Bonne réponse":"Mauvaise réponse"),a.explain));
+  // Correction de la question qui vient d'être jouée
+  if(S.qIndex!==null){
+    const i=S.qIndex, a=mine[i], last=mine.length>=n;
+    card.append(el("div",{class:"qnum"},el("span",{},`Question ${i+1} sur ${n}`),levelTag(i,n)),el("div",{class:"question"},a.text));
+    card.append(el("div",{class:"choices"},a.choices.map((c,k)=>{ let cls="choice"; if(k===a.answer) cls+=" right"; else if(k===a.choice) cls+=" wrong";
+      return el("button",{class:cls,disabled:true},el("span",{class:"k"},L[k]),el("span",{},c)); })));
+    card.append(el("div",{class:"explain"},el("b",{},a.choice===-1?"Temps écoulé":a.correct?"Bonne réponse":"Mauvaise réponse"),a.explain));
     if(a.tip) card.append(el("div",{class:"tip"},el("b",{},"À retenir"),a.tip));
-    const last=i===n-1;
-    card.append(el("button",{class:"btn",onclick:async()=>{ if(last){ S.qIndex=null; try{ S.week=await rpc("current_week")||S.week; }catch(e){} } else S.qIndex=i+1; render(); }},last?"Voir mon score":"Question suivante"));
+    card.append(el("button",{class:"btn",disabled:S.busy,onclick:async()=>{ if(last){ S.qIndex=null; try{ S.week=await rpc("current_week")||S.week; }catch(e){} render(); } else startQ(i+1); }},last?"Voir mon score":"Question suivante"));
+    $view.append(card); return;
   }
+  const i=mine.length;
+  // Question en cours, avec le chrono
+  if(S.cur&&S.cur.q===i){
+    const q=S.cur;
+    card.append(el("div",{class:"qnum"},el("span",{},`Question ${i+1} sur ${n}`),levelTag(i,n)),
+      el("div",{class:"timer"},el("div",{class:"track"},el("div",{class:"bar",id:"tbar"})),el("span",{id:"tsec"},Math.ceil(remaining())+" s")),
+      el("div",{class:"question"},q.text),
+      el("div",{class:"choices"},q.choices.map((c,k)=>el("button",{class:"choice",disabled:S.busy,onclick:()=>answer(i,k)},el("span",{class:"k"},L[k]),el("span",{},c)))));
+    $view.append(card); return;
+  }
+  // Avant d'afficher la question
+  const resumed=S.pending===i;
+  card.append(el("div",{class:"qnum"},el("span",{},`Question ${i+1} sur ${n}`),levelTag(i,n)),
+    el("div",{class:"ready"},el("div",{class:"clock"},icon("clock")),
+      el("p",{},resumed?"Cette question a déjà été affichée : le chrono a continué de tourner.":`Tu auras ${w.limit} secondes pour répondre dès que la question s'affiche. Sans réponse, elle compte comme fausse.`)),
+    el("button",{class:"btn",disabled:S.busy,onclick:()=>startQ(i)},resumed?"Reprendre la question":(i===0?"Commencer la série":"Afficher la question")));
   $view.append(card);
 }
 async function answer(i,k){
-  if(S.busy) return; S.busy=true; render();
-  try{ const r=await rpc("submit_answer",{...cred(),p_week:S.week.id,p_q:i,p_choice:k}); S.mine[i]=r; S.qIndex=i; loadBadges().then(()=>{}); }
-  catch(e){ alert(e.message); }
+  if(S.busy) return; S.busy=true; stopTimer();
+  try{ const r=await rpc("submit_answer",{...cred(),p_week:S.week.id,p_q:i,p_choice:k}); S.mine[i]=r; S.qIndex=i; S.cur=null; S.pending=null; loadBadges(); }
+  catch(e){ S.flash=e.message; S.cur=null; try{ await loadWeek(); }catch(x){} }
   S.busy=false; render();
 }
 
 /* ---------- Classement ---------- */
-async function loadBoard(){ try{ if(!S.prizes) S.prizes=await rpc("prizes_list").catch(()=>[]); S.board=await rpc("leaderboard"); }catch(e){ S.board={error:e.message}; } if(S.tab==="board") render(); }
+async function loadBoard(){
+  try{
+    if(!S.prizes) S.prizes=await rpc("prizes_list");
+    if(!S.phase) S.phase=(new Date().toISOString().slice(0,10)<=S.prizes.mid_end)?"mid":"season";
+    S.boards=S.boards||{}; S.boards[S.phase]=await rpc("leaderboard",{p_phase:S.phase});
+  }catch(e){ S.boards={error:e.message}; }
+  if(S.tab==="board") render();
+}
 function renderBoard(){
-  if(!S.board){ $view.append(el("div",{class:"notice"},"Chargement du classement…")); return; }
-  if(S.board.error){ $view.append(el("div",{class:"notice"},S.board.error)); return; }
-  let rank=0,prev=null; const rows=S.board.map((r,i)=>{ if(r.points!==prev){rank=i+1;prev=r.points;} return {...r,rank}; });
-  if(!rows.length){ $view.append(el("div",{class:"card"},el("h2",{},"Classement général"),el("p",{class:"muted"},"Personne n'a encore joué. Le premier qui répond prend la tête."))); renderPrizes(); return; }
+  if(S.boards&&S.boards.error){ $view.append(el("div",{class:"notice"},S.boards.error)); return; }
+  const midEnd=S.prizes?fmt(S.prizes.mid_end):"31 décembre";
+  $view.append(el("div",{class:"seg",role:"tablist"},
+    [["mid",`Mi-saison · ${midEnd}`],["season","Saison complète"]].map(([k,t])=>el("button",{"aria-selected":S.phase===k?"true":"false",onclick:()=>{ S.phase=k; render(); if(!(S.boards&&S.boards[k])) loadBoard(); }},t))));
+  const data=S.boards&&S.boards[S.phase];
+  if(!data){ $view.append(el("div",{class:"notice"},"Chargement du classement…")); return; }
+  let rank=0,prev=null; const rows=data.map((r,i)=>{ if(r.points!==prev){rank=i+1;prev=r.points;} return {...r,rank}; });
+  if(!rows.length){ $view.append(el("div",{class:"card"},el("h2",{},"Classement"),el("p",{class:"muted"},"Personne n'a encore joué. Le premier qui répond prend la tête."))); renderPrizes(); return; }
   const me=S.auth.pseudo.toLowerCase(), top=rows.slice(0,3), order=[top[1],top[0],top[2]];
   $view.append(
-    el("div",{class:"card"},el("h3",{},"Classement général "+new Date().getFullYear()),
+    el("div",{class:"card"},el("h3",{},S.phase==="mid"?`Classement de mi-saison · arrêté au ${midEnd}`:"Classement de la saison complète"),
       el("div",{class:"podium"},order.map((r,j)=>r?el("div",{class:"step s"+[2,1,3][j]},el("div",{class:"nm"},r.pseudo),el("div",{class:"block"},r.points)):el("div")))),
     el("div",{class:"card"},el("ol",{class:"board"},rows.map(r=>el("li",{class:"row"+(r.rank===1?" p1":"")+(r.pseudo.toLowerCase()===me?" mine":"")},
       el("div",{class:"rank"},r.rank),
-      el("div",{style:"min-width:0"},el("div",{class:"name"},r.pseudo),el("div",{class:"sub"},`${r.weeks_played} semaine${r.weeks_played>1?"s jouées":" jouée"}`+(r.perfect?` · ${r.perfect} sans-faute`:"")+(r.badges?` · ${r.badges} badge${r.badges>1?"s":""}`:""))),
+      el("div",{style:"min-width:0"},el("div",{class:"name"},r.pseudo),el("div",{class:"sub"},`${r.weeks_played} série${r.weeks_played>1?"s jouées":" jouée"}`+(r.perfect?` · ${r.perfect} sans-faute`:"")+(r.badges?` · ${r.badges} badge${r.badges>1?"s":""}`:""))),
       el("div",{class:"pts"},r.points,el("small",{},"pts")))))));
   renderPrizes();
 }
 function renderPrizes(){
-  const p=(S.prizes||[]).filter(x=>x&&x.label);
+  if(!S.prizes) return;
+  const p=(S.prizes[S.phase]||[]).filter(x=>x&&x.label);
   if(!p.length) return;
-  $view.append(el("div",{class:"card"},el("h3",{},"À gagner en fin d'année"),
+  $view.append(el("div",{class:"card"},el("h3",{},S.phase==="mid"?`À gagner au ${fmt(S.prizes.mid_end)}`:"À gagner en fin de saison"),
     el("div",{class:"prizes"},p.map(x=>el("div",{class:"prize r"+x.rank},el("div",{class:"medal"},x.rank),el("span",{},x.label)))),
-    el("p",{class:"muted",style:"font-size:13px"},"À égalité de points, le nombre de sans-faute départage, puis le nombre de semaines jouées.")));
+    el("p",{class:"muted",style:"font-size:13px"},"Un point par bonne réponse. À égalité, le nombre de séries sans faute départage, puis le nombre de séries jouées.")));
 }
 
 /* ---------- Archives et corrections ---------- */
@@ -312,9 +382,9 @@ function renderArchive(){
     if(S.review.error){ $view.append(el("div",{class:"card"},back,el("div",{class:"notice"},S.review.error))); return; }
     const r=S.review, card=el("div",{class:"card"},back,el("h3",{},r.label),el("h2",{},r.theme));
     r.items.forEach((it,i)=>{ const ok=it.choice===it.answer;
-      card.append(el("div",{class:"review"},el("span",{class:"tag "+(it.choice==null?"":ok?"ok":"bad")},it.choice==null?"Non répondu":ok?"Juste":"Faux"),
+      card.append(el("div",{class:"review"},el("span",{class:"tag "+(it.choice==null?"":ok?"ok":"bad")},it.choice==null?"Non répondu":it.choice===-1?"Temps écoulé":ok?"Juste":"Faux"),
         el("strong",{},`${i+1}. ${it.q}`),el("p",{},`Réponse : ${L[it.answer]}. ${it.choices[it.answer]}`),
-        it.choice!=null&&!ok?el("p",{class:"muted"},`Ta réponse : ${L[it.choice]}. ${it.choices[it.choice]}`):null,
+        it.choice!=null&&it.choice>=0&&!ok?el("p",{class:"muted"},`Ta réponse : ${L[it.choice]}. ${it.choices[it.choice]}`):null,
         el("p",{class:"muted"},it.explain),
         it.tip?el("div",{class:"tip"},el("b",{},"À retenir"),it.tip):null)); });
     $view.append(card); return;
@@ -330,36 +400,55 @@ function renderArchive(){
 }
 
 /* ---------- Niveau de difficulté ---------- */
-const LEVELS=["Facile","Facile","Intermédiaire","Difficile","Expert"];
-function levelTag(i){ return el("span",{class:"level"},LEVELS[i]||"",el("i",{},[0,1,2,3,4].map(k=>el("b",{class:k<=i?"on":""})))); }
+// Séries de 10 : questions 1-3 faciles, 4-6 intermédiaires, 7-8 difficiles, 9-10 expert
+const LEVELS=["Facile","Intermédiaire","Difficile","Expert"];
+function levelOf(i,n){ const x=(i+0.5)/(n||10); return x<0.3?0:x<0.6?1:x<0.8?2:3; }
+function levelTag(i,n){ const l=levelOf(i,n); return el("span",{class:"level"},LEVELS[l],el("i",{},[0,1,2,3].map(k=>el("b",{class:k<=l?"on":""})))); }
 
-/* ---------- Espace questions ---------- */
+/* ---------- Espace de partage ---------- */
 function readSeen(){ try{ return +localStorage.getItem("quiz-forum-seen")||0; }catch(e){ return 0; } }
 function writeSeen(n){ try{ localStorage.setItem("quiz-forum-seen",String(n)); }catch(e){} }
 let forumTotal=0;
 async function checkForum(){ try{ forumTotal=await rpc("forum_count"); updateDot(); }catch(e){} }
-function updateDot(){ const b=document.querySelector('nav button[data-tab="forum"]'); if(!b) return; const old=b.querySelector(".dot"); if(old) old.remove(); if(S.tab!=="forum"&&forumTotal>readSeen()) b.append(el("span",{class:"dot","aria-label":"nouvelles réponses"})); }
-async function loadForum(){ try{ S.forum=await rpc("list_questions",cred()); forumTotal=S.forum.filter(f=>f.answer).length; writeSeen(Math.max(forumTotal,readSeen())); }catch(e){ S.forum={error:e.message}; } if(S.tab==="forum") render(); }
+function updateDot(){ const b=document.querySelector('nav button[data-tab="forum"]'); if(!b) return; const old=b.querySelector(".dot"); if(old) old.remove(); if(S.tab!=="forum"&&forumTotal>readSeen()) b.append(el("span",{class:"dot","aria-label":"nouveautés"})); }
+async function loadForum(){ try{ S.forum=await rpc("list_posts",cred()); forumTotal=S.forum.filter(f=>f.kind!=="question"||f.answer).length; writeSeen(Math.max(forumTotal,readSeen())); }catch(e){ S.forum={error:e.message}; } if(S.tab==="forum") render(); }
 function when(ts){ return new Date(ts).toLocaleDateString("fr-FR",{day:"numeric",month:"long"}); }
+const KINDS={question:"Question",lecture:"Lecture",video:"Vidéo",lien:"Lien"};
+function domain(u){ try{ return new URL(u).hostname.replace(/^www\./,""); }catch(e){ return ""; } }
 function renderForum(){
-  const box=el("textarea",{id:"ask",maxlength:"800",placeholder:"Ex. Un client peut-il avoir un LEP et un Livret A en même temps ?"});
-  const err=el("p",{class:"error",role:"alert"});
-  const btn=el("button",{class:"btn",type:"submit"},"Envoyer ma question");
-  $view.append(el("form",{class:"card ask",onsubmit:async e=>{ e.preventDefault(); err.textContent="";
-      if(box.value.trim().length<10){ err.textContent="Ta question est trop courte."; return; }
-      btn.disabled=true;
-      try{ await rpc("ask_question",{...cred(),p_body:box.value,p_anonymous:false}); box.value=""; await loadForum(); loadBadges(); }
+  S.compose=S.compose||"question"; S.filter=S.filter||"tout";
+  const k=S.compose;
+  const D=S.draft=S.draft||{title:"",url:"",body:""};
+  const title=el("input",{id:"p-title",type:"text",maxlength:"150",value:D.title,oninput:e=>D.title=e.target.value,placeholder:k==="lecture"?"Ex. La Psychologie de l'argent, Morgan Housel":k==="video"?"Ex. Les intérêts composés en 5 minutes":"Ex. Simulateur officiel de l'impôt sur le revenu"});
+  const url=el("input",{id:"p-url",type:"url",inputmode:"url",placeholder:"https://…",value:D.url,oninput:e=>D.url=e.target.value});
+  const body=el("textarea",{id:"p-body",maxlength:"800",value:D.body,oninput:e=>D.body=e.target.value,placeholder:k==="question"?"Ex. Un client peut-il détenir un LEP et un Livret A en même temps ?":"Pourquoi tu le recommandes, en une ou deux phrases"});
+  const err=el("p",{class:"error",role:"alert"}), btn=el("button",{class:"btn",type:"submit"},k==="question"?"Envoyer ma question":"Partager");
+  $view.append(el("form",{class:"card ask",onsubmit:async e=>{ e.preventDefault(); err.textContent=""; btn.disabled=true;
+      try{ await rpc("share_post",{...cred(),p_kind:k,p_title:k==="question"?null:title.value,p_body:body.value,p_url:k==="question"?null:url.value});
+        S.draft=null; S.flash=k==="question"?"Question envoyée : elle sera visible par tous une fois que j'y aurai répondu.":"Merci pour le partage, c'est en ligne.";
+        await loadForum(); loadBadges(); }
       catch(x){ err.textContent=x.message; btn.disabled=false; } }},
-    el("h2",{},"Une question ?"),
-    el("p",{class:"muted"},"Sur un placement, un cas client, une notion du quiz… Ta question et sa réponse seront publiées ici, avec ton prénom, pour que tout le monde en profite."),
-    box, err, btn));
-  if(!S.forum){ $view.append(el("div",{class:"notice"},"Chargement des questions…")); return; }
+    el("h2",{},"Partager"),
+    el("div",{class:"chips",role:"tablist"},Object.entries(KINDS).map(([key,lab])=>el("button",{type:"button","aria-selected":k===key?"true":"false",onclick:()=>{S.compose=key;render();}},lab))),
+    el("p",{class:"muted",style:"font-size:13px"},k==="question"?"Une question sur un placement, un cas client, une notion du quiz : elle est publiée avec ta réponse, sous ton prénom.":"Un livre, une vidéo, un article ou un outil utile : il est publié tout de suite, sous ton prénom."),
+    k!=="question"?el("div",{class:"field"},el("label",{for:"p-title"},"Titre"),title):null,
+    k!=="question"?el("div",{class:"field"},el("label",{for:"p-url"},k==="lecture"?"Lien (facultatif)":"Lien"),url):null,
+    el("div",{class:"field"},el("label",{for:"p-body"},k==="question"?"Ta question":"Ton avis (facultatif)"),body),
+    S.flash?el("p",{class:"okmsg"},S.flash):null, err, btn));
+  S.flash=null;
+  if(!S.forum){ $view.append(el("div",{class:"notice"},"Chargement…")); return; }
   if(S.forum.error){ $view.append(el("div",{class:"notice"},S.forum.error)); return; }
-  if(!S.forum.length){ $view.append(el("div",{class:"notice"},"Aucune question pour l'instant. Pose la première !")); return; }
-  $view.append(el("div",{class:"card"},el("h3",{},"Questions et réponses"),el("div",{},S.forum.map(f=>el("div",{class:"thread"},
-    el("div",{class:"meta"},(f.mine?"Toi":(f.author||"Un collègue"))+" · "+when(f.created_at)),
-    el("div",{class:"q"},f.body),
-    f.answer?el("div",{class:"a"},el("b",{},"Réponse"),f.answer):el("div",{class:"pending"},"En attente de réponse"))))));
+  const list=S.forum.filter(f=>S.filter==="tout"||f.kind===S.filter);
+  $view.append(el("div",{class:"card"},
+    el("div",{class:"chips small",role:"tablist"},[["tout","Tout"],...Object.entries(KINDS)].map(([key,lab])=>el("button",{type:"button","aria-selected":S.filter===key?"true":"false",onclick:()=>{S.filter=key;render();}},lab))),
+    list.length?el("div",{},list.map(f=>el("div",{class:"thread"},
+      el("div",{class:"meta"},el("span",{class:"kind k-"+f.kind},KINDS[f.kind]),(f.mine?"Toi":(f.author||"Un collègue"))+" · "+when(f.created_at)),
+      f.title?(f.url?el("a",{class:"q",href:f.url,target:"_blank",rel:"noopener noreferrer"},f.title):el("div",{class:"q"},f.title)):null,
+      f.url?el("div",{class:"meta"},domain(f.url)):null,
+      f.body?el("div",{class:f.title?"desc":"q"},f.body):null,
+      f.answer?el("div",{class:"a"},el("b",{},f.kind==="question"?"Réponse":"Le mot de l'organisateur"),f.answer):(f.kind==="question"?el("div",{class:"pending"},"En attente de réponse"):null),
+      (f.kind!=="question"||f.answer)?el("button",{class:"like"+(f.liked?" on":""),"aria-pressed":f.liked?"true":"false",onclick:async()=>{ try{ const r=await rpc("toggle_like",{...cred(),p_id:f.id}); f.liked=!f.liked; f.likes=r.likes; render(); }catch(e){} }},icon("thumb"),`Utile${f.likes?" · "+f.likes:""}`):null
+    ))):el("div",{class:"notice"},S.filter==="tout"?"Rien pour l'instant. Lance la discussion !":"Rien dans cette catégorie pour l'instant.")));
 }
 
 /* ---------- Badges ---------- */
@@ -376,7 +465,9 @@ const ICONS={
  brain:'<path d="M9 4a3 3 0 0 0-3 3 3 3 0 0 0-2 5 3 3 0 0 0 2 5 3 3 0 0 0 6 1V5a2 2 0 0 0-3-1zM15 4a3 3 0 0 1 3 3 3 3 0 0 1 2 5 3 3 0 0 1-2 5 3 3 0 0 1-6 1"/>',
  bell:'<path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4zM10 21h4"/>',
  scroll:'<path d="M7 4h11v13a3 3 0 0 1-3 3H6a3 3 0 0 1 0-6h1zM10 8h5M10 11h5"/>',
- chat:'<path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/>'
+ chat:'<path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/>',
+ book:'<path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2zM4 21V5M8 7h7"/>',
+ thumb:'<path d="M7 10v10H4V10zM7 10l4-7a2 2 0 0 1 2 2v4h5.5a2 2 0 0 1 2 2.3l-1.2 7A2 2 0 0 1 17.3 20H7"/>'
 };
 function icon(name){ const t=document.createElement("template"); t.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'+(ICONS[name]||ICONS.star)+'</svg>'; return t.content.firstChild; }
 const unlocked=b=>b.progress>=b.target;

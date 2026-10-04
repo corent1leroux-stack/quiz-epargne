@@ -22,7 +22,7 @@ const SUPABASE_KEY = "sb_publishable_4TEnAMm1Uu_MON6riVHtiw_tHZ1xA2v";
 :root{
   --bg:#EEF2EF; --surface:#FFFFFF; --ink:#13241D; --muted:#5A6B63; --line:#D7E0DA;
   --accent:#0B6E55; --accent-ink:#FFFFFF; --accent-soft:#DDEFE8;
-  --gold:#B7790C; --bronze:#A8693B; --silver:#7D8C93; --ok:#1F8A4C; --ok-soft:#E1F3E8; --bad:#C2412D; --bad-soft:#FBE7E3;
+  --gold:#B7790C; --link:#2D5A8C; --bronze:#A8693B; --silver:#7D8C93; --ok:#1F8A4C; --ok-soft:#E1F3E8; --bad:#C2412D; --bad-soft:#FBE7E3;
   --display:"Bricolage Grotesque",ui-rounded,system-ui,sans-serif;
   --body:"Instrument Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
   color-scheme:light;
@@ -30,7 +30,7 @@ const SUPABASE_KEY = "sb_publishable_4TEnAMm1Uu_MON6riVHtiw_tHZ1xA2v";
 @media (prefers-color-scheme:dark){:root{
   --bg:#0E1613; --surface:#16211D; --ink:#E4EDE8; --muted:#90A39A; --line:#26352F;
   --accent:#3FC79F; --accent-ink:#082019; --accent-soft:#173A30;
-  --gold:#C99A3A; --bronze:#A0673F; --silver:#6F8089; --ok:#4FCB83; --ok-soft:#163323; --bad:#F07A66; --bad-soft:#3A1E19; color-scheme:dark}}
+  --gold:#C99A3A; --link:#8DB4E2; --bronze:#A0673F; --silver:#6F8089; --ok:#4FCB83; --ok-soft:#163323; --bad:#F07A66; --bad-soft:#3A1E19; color-scheme:dark}}
 *{box-sizing:border-box}
 [hidden]{display:none!important}
 html,body{background:var(--bg);margin:0}
@@ -79,6 +79,30 @@ p{margin:0}
 .toast .medal svg{width:20px;height:20px}
 .toast b{display:block;font-size:12px;text-transform:uppercase;letter-spacing:.08em;opacity:.75}
 @keyframes pop{from{transform:translateY(12px);opacity:0}to{transform:none;opacity:1}}
+.timer{display:flex;align-items:center;gap:10px}
+.timer .track{flex:1;height:8px;border-radius:4px;background:var(--line);overflow:hidden}
+.timer .bar{height:100%;width:100%;background:var(--accent);border-radius:4px;transition:width .25s linear}
+.timer .bar.hurry{background:var(--bad)}
+.timer span{font:700 14px var(--body);font-variant-numeric:tabular-nums;min-width:36px;text-align:right}
+.ready{display:flex;gap:14px;align-items:center;padding:6px 0}
+.ready .clock{flex:none;width:48px;height:48px;border-radius:50%;display:grid;place-items:center;background:var(--accent-soft);color:var(--accent)}
+.ready .clock svg{width:24px;height:24px}
+.seg,.chips{display:flex;gap:6px;flex-wrap:wrap}
+.seg{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:4px}
+.seg button,.chips button{all:unset;cursor:pointer;flex:1;text-align:center;padding:9px 10px;border-radius:9px;font:600 13px var(--body);color:var(--muted)}
+.chips button{flex:none;border:1.5px solid var(--line);border-radius:99px;padding:7px 14px}
+.chips.small button{padding:5px 12px;font-size:12px}
+.seg button[aria-selected=true]{background:var(--accent-soft);color:var(--accent)}
+.chips button[aria-selected=true]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.seg button:focus-visible,.chips button:focus-visible,.like:focus-visible{outline:2px solid var(--accent)}
+.kind{display:inline-flex;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;padding:2px 8px;border-radius:99px;background:var(--line);color:var(--ink)}
+.kind.k-question{background:var(--accent-soft);color:var(--accent)} .kind.k-lecture{background:rgba(183,121,12,.16);color:var(--gold)} .kind.k-video{background:var(--bad-soft);color:var(--bad)} .kind.k-lien{background:rgba(70,110,170,.16);color:var(--link)}
+a.q{color:var(--accent);text-decoration:underline;text-underline-offset:3px}
+.thread .desc{font-size:14px}
+.like{all:unset;cursor:pointer;align-self:flex-start;display:inline-flex;gap:6px;align-items:center;font:600 13px var(--body);color:var(--muted);padding:6px 10px;border-radius:99px;border:1.5px solid var(--line)}
+.like svg{width:16px;height:16px}
+.like.on{color:var(--accent);border-color:var(--accent);background:var(--accent-soft)}
+.okmsg{color:var(--ok);font-size:14px;font-weight:600}
 .thread .pending{font-size:13px;color:var(--gold);font-weight:600}
 .question{font:600 19px/1.35 var(--display);letter-spacing:-.01em;text-wrap:pretty}
 .choices{display:flex;flex-direction:column;gap:10px}
@@ -195,7 +219,7 @@ nav button .count{position:absolute;top:3px;right:calc(50% - 22px);min-width:18p
 </div>
 <nav id="nav" hidden><div class="tabs" role="tablist" style="grid-template-columns:repeat(5,1fr);gap:2px">
   <button role="tab" data-tab="suivi" aria-selected="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20V12h4v8M10 20V6h4v14M16 20v-5h4v5"/></svg>Suivi</button>
-  <button role="tab" data-tab="forum" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg>Questions</button>
+  <button role="tab" data-tab="forum" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg>Partage</button>
   <button role="tab" data-tab="joueurs" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.6 3.4-5.5 6.5-5.5s5.7 1.9 6.5 5.5M16 4.5a3.5 3.5 0 0 1 0 7M18 14.8c1.8.8 3 2.5 3.5 5.2"/></svg>Joueurs</button>
   <button role="tab" data-tab="lots" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="8" width="18" height="13" rx="2"/><path d="M12 8v13M3 12h18M12 8c-1.5-3-5-4-5-1.5S10 8 12 8zm0 0c1.5-3 5-4 5-1.5S14 8 12 8z"/></svg>Lots</button>
   <button role="tab" data-tab="reglages" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-2.9 1.2V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-2.9-1.2l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.7 1.7 0 0 0 3 14.1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.2-2.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 2.9-1.2V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 2.9 1.2l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0 1.2 2.9h.1a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>Réglages</button>
@@ -324,35 +348,39 @@ function renderEdit(w){
 
 /* ---------- Questions des joueurs ---------- */
 function updateCount(){ const b=document.querySelector('nav button[data-tab="forum"]'); if(!b) return; const old=b.querySelector(".count"); if(old) old.remove();
-  const n=(S.forum||[]).filter(f=>!f.answer).length; if(n) b.append(el("span",{class:"count"},n)); }
+  const n=(S.forum||[]).filter(f=>f.kind==="question"&&!f.answer).length; if(n) b.append(el("span",{class:"count"},n)); }
 function when(ts){ return new Date(ts).toLocaleDateString("fr-FR",{day:"numeric",month:"long"}); }
+const KINDS={question:"Question",lecture:"Lecture",video:"Vidéo",lien:"Lien"};
 function renderForum(){
-  const list=S.forum||[], pending=list.filter(f=>!f.answer);
-  const card=el("div",{class:"card"},el("h2",{},"Questions des joueurs"),
+  const list=S.forum||[], pending=list.filter(f=>f.kind==="question"&&!f.answer);
+  const card=el("div",{class:"card"},el("h2",{},"Espace de partage"),
     el("p",{class:"muted"},pending.length?`${pending.length} question${pending.length>1?"s":""} en attente de réponse.`:"Toutes les questions ont une réponse."),
-    el("p",{class:"muted",style:"font-size:13px"},"Les questions n'apparaissent aux joueurs qu'une fois que tu y as répondu. Toi seul vois le prénom des questions posées anonymement."));
-  if(!list.length) card.append(el("div",{class:"notice"},"Aucune question pour l'instant."));
+    el("p",{class:"muted",style:"font-size:13px"},"Les questions n'apparaissent aux joueurs qu'une fois que tu y as répondu. Les lectures, vidéos et liens sont publiés directement : tu peux y ajouter un commentaire, les masquer ou les supprimer."));
+  if(!list.length) card.append(el("div",{class:"notice"},"Aucune publication pour l'instant."));
   list.forEach(f=>{
+    const isQ=f.kind==="question";
     const t=el("div",{class:"thread"},
-      el("div",{class:"meta"},el("strong",{},f.author||"Joueur supprimé"),f.anonymous?el("span",{class:"badge"},"anonyme pour les autres"):null,when(f.created_at),
-        f.hidden?el("span",{class:"badge warn"},"masquée"):null, !f.answer?el("span",{class:"badge live"},"à répondre"):null),
-      el("div",{class:"q"},f.body));
-    if(S.answering===f.id||!f.answer){
-      const box=el("textarea",{id:"ans-"+f.id,value:f.answer||"",placeholder:"Ta réponse, visible par tous les joueurs"}), err=el("p",{class:"error"});
+      el("div",{class:"meta"},el("span",{class:"badge"},KINDS[f.kind]||f.kind),el("strong",{},f.author||"Joueur supprimé"),when(f.created_at),
+        f.hidden?el("span",{class:"badge warn"},"masquée"):null, isQ&&!f.answer?el("span",{class:"badge live"},"à répondre"):null, f.likes?el("span",{},`${f.likes} « utile »`):null),
+      f.title?el("div",{class:"q"},f.title):null,
+      f.url?el("a",{href:f.url,target:"_blank",rel:"noopener noreferrer",style:"color:var(--accent);font-size:13px;word-break:break-all"},f.url):null,
+      f.body?el("div",{class:f.title?"":"q"},f.body):null);
+    if(S.answering===f.id||(isQ&&!f.answer)){
+      const box=el("textarea",{id:"ans-"+f.id,value:f.answer||"",placeholder:isQ?"Ta réponse, visible par tous les joueurs":"Ton commentaire, visible par tous (laisse vide pour le retirer)"}), err=el("p",{class:"error"});
       const save=el("button",{class:"btn small",onclick:async()=>{ err.textContent=""; save.disabled=true;
-        try{ await rpc("admin_answer",{p_pass:S.pass,p_id:f.id,p_answer:box.value}); await refresh(); S.answering=null; S.flash="Réponse publiée."; render(); }
-        catch(x){ err.textContent=x.message; save.disabled=false; } }},f.answer?"Enregistrer":"Publier la réponse");
-      t.append(box,el("div",{class:"actions"},save,f.answer?el("button",{class:"link",onclick:()=>{S.answering=null;render();}},"Annuler"):null),err);
-    } else {
+        try{ await rpc("admin_answer",{p_pass:S.pass,p_id:f.id,p_answer:box.value}); await refresh(); S.answering=null; S.flash=isQ?"Réponse publiée.":"Commentaire enregistré."; render(); }
+        catch(x){ err.textContent=x.message; save.disabled=false; } }},isQ&&!f.answer?"Publier la réponse":"Enregistrer");
+      t.append(box,el("div",{class:"actions"},save,(f.answer||!isQ)?el("button",{class:"link",onclick:()=>{S.answering=null;render();}},"Annuler"):null),err);
+    } else if(f.answer){
       t.append(el("div",{class:"a"},f.answer));
     }
     const acts=el("div",{class:"actions"});
-    if(f.answer&&S.answering!==f.id) acts.append(el("button",{class:"link",onclick:()=>{S.answering=f.id;S.flash=null;render();}},"Modifier la réponse"));
-    if(f.answer) acts.append(el("button",{class:"link",onclick:async()=>{ await rpc("admin_hide_question",{p_pass:S.pass,p_id:f.id,p_hidden:!f.hidden}); await refresh(); S.flash=f.hidden?"Question de nouveau visible.":"Question masquée aux joueurs."; render(); }},f.hidden?"Afficher":"Masquer"));
+    if(S.answering!==f.id&&(f.answer||!isQ)) acts.append(el("button",{class:"link",onclick:()=>{S.answering=f.id;S.flash=null;render();}},isQ?"Modifier la réponse":(f.answer?"Modifier mon commentaire":"Ajouter un commentaire")));
+    if(f.answer||!isQ) acts.append(el("button",{class:"link",onclick:async()=>{ await rpc("admin_hide_question",{p_pass:S.pass,p_id:f.id,p_hidden:!f.hidden}); await refresh(); S.flash=f.hidden?"Publication de nouveau visible.":"Publication masquée aux joueurs."; render(); }},f.hidden?"Afficher":"Masquer"));
     acts.append(el("button",{class:"link danger",onclick:()=>{S.confirmDel=f.id;render();}},"Supprimer"));
     t.append(acts);
-    if(S.confirmDel===f.id) t.append(el("div",{class:"inline"},el("p",{style:"width:100%"},"Supprimer définitivement cette question ?"),
-      el("button",{class:"btn small danger",onclick:async()=>{ await rpc("admin_delete_question",{p_pass:S.pass,p_id:f.id}); await refresh(); S.confirmDel=null; S.flash="Question supprimée."; render(); }},"Supprimer"),
+    if(S.confirmDel===f.id) t.append(el("div",{class:"inline"},el("p",{style:"width:100%"},"Supprimer définitivement cette publication ?"),
+      el("button",{class:"btn small danger",onclick:async()=>{ await rpc("admin_delete_question",{p_pass:S.pass,p_id:f.id}); await refresh(); S.confirmDel=null; S.flash="Publication supprimée."; render(); }},"Supprimer"),
       el("button",{class:"link",onclick:()=>{S.confirmDel=null;render();}},"Annuler")));
     card.append(t);
   });
@@ -393,15 +421,18 @@ function deleteForm(p){
 
 /* ---------- Lots ---------- */
 function renderPrizes(){
-  const cur={}; (S.data.prizes||[]).forEach(p=>cur[p.rank]=p.label);
-  const inputs=[1,2,3].map(r=>el("input",{id:"prize"+r,type:"text",maxlength:"120",value:cur[r]||""}));
+  const P=S.data.prizes||{}, phases=[["mid",`Classement de mi-saison (au ${P.mid_end?fmt(P.mid_end):"31 décembre"})`],["season","Classement final de la saison"]];
+  const inputs={}, cur={};
+  phases.forEach(([ph])=>{ cur[ph]={}; (P[ph]||[]).forEach(p=>cur[ph][p.rank]=p.label); inputs[ph]=[1,2,3].map(r=>el("input",{id:`prize-${ph}-${r}`,type:"text",maxlength:"120",value:cur[ph][r]||""})); });
   const err=el("p",{class:"error",role:"alert"}), btn=el("button",{class:"btn",type:"submit"},"Enregistrer les lots");
   $view.append(el("form",{class:"card",onsubmit:async e=>{ e.preventDefault(); err.textContent=""; btn.disabled=true;
-    try{ for(let r=1;r<=3;r++){ const v=inputs[r-1].value.trim(); if(v!==(cur[r]||"")) await rpc("admin_set_prize",{p_pass:S.pass,p_rank:r,p_label:v}); }
-      await refresh(); S.flash="Lots enregistrés. Ils s'affichent sous le classement."; render(); }
+    try{ for(const [ph] of phases) for(let r=1;r<=3;r++){ const v=inputs[ph][r-1].value.trim(); if(v!==(cur[ph][r]||"")) await rpc("admin_set_prize",{p_pass:S.pass,p_phase:ph,p_rank:r,p_label:v}); }
+      await refresh(); S.flash="Lots enregistrés. Ils s'affichent sous chaque classement."; render(); }
     catch(x){ err.textContent=x.message; btn.disabled=false; } }},
-    el("h2",{},"Lots du podium"),el("p",{class:"muted"},"Ils apparaissent pour tous les joueurs, sous le classement général."),
-    [1,2,3].map(r=>el("div",{class:"field"},el("label",{for:"prize"+r},r===1?"1re place":`${r}e place`),inputs[r-1])),err,btn));
+    el("h2",{},"Lots des podiums"),el("p",{class:"muted"},"Ils apparaissent pour tous les joueurs, sous le classement correspondant."),
+    phases.map(([ph,title])=>el("div",{style:"display:flex;flex-direction:column;gap:10px"},el("h3",{},title),
+      [1,2,3].map(r=>el("div",{class:"field"},el("label",{for:`prize-${ph}-${r}`},r===1?"1re place":`${r}e place`),inputs[ph][r-1])))),
+    err,btn));
 }
 
 /* ---------- Réglages ---------- */
