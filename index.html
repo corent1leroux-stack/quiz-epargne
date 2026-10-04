@@ -73,6 +73,23 @@ p{margin:0}
 .bdg .nm{font-size:12px;font-weight:600;line-height:1.25}
 .bdg .pg{width:80%;height:4px;border-radius:2px;background:var(--line);overflow:hidden}
 .bdg .pg i{display:block;height:100%;background:var(--accent)}
+.btn.small{padding:10px 14px;font-size:14px}
+.bcat{display:flex;flex-direction:column;gap:10px}
+.mini-badges{display:flex;flex-wrap:wrap;gap:6px;padding:4px 0 2px 46px}
+.mini-badges span{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;padding:3px 9px 3px 4px;border-radius:99px;background:var(--bg)}
+.mini-badges i{width:20px;height:20px;border-radius:50%;display:grid;place-items:center;color:#fff;background:var(--gold)}
+.mini-badges i.t1{background:var(--bronze)} .mini-badges i.t2{background:var(--silver)}
+.mini-badges svg{width:12px;height:12px}
+.row{cursor:pointer}
+.replies{display:flex;flex-direction:column;gap:8px;border-left:2px solid var(--line);padding-left:12px}
+.reply{font-size:14px;display:flex;flex-direction:column;gap:2px}
+.reply .meta{font-size:12px;color:var(--muted);display:flex;gap:8px}
+.reply-form{display:flex;gap:8px;align-items:flex-end}
+.reply-form textarea{flex:1;min-height:44px;padding:10px 12px;border-radius:12px;border:1.5px solid var(--line);background:var(--bg);color:var(--ink);font:500 14px/1.4 var(--body);resize:vertical}
+.reply-form textarea:focus{outline:none;border-color:var(--accent)}
+.post-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.ghost-sm{all:unset;cursor:pointer;font:600 13px var(--body);color:var(--accent);padding:6px 4px}
+.ghost-sm.danger{color:var(--bad)}
 .bdg-detail{background:var(--accent-soft);border-radius:12px;padding:12px 14px;font-size:14px}
 .toast{position:fixed;left:16px;right:16px;bottom:calc(84px + env(safe-area-inset-bottom,0px));max-width:488px;margin:0 auto;background:var(--ink);color:var(--bg);border-radius:14px;padding:12px 14px;display:flex;gap:12px;align-items:center;box-shadow:0 8px 24px rgba(0,0,0,.25);z-index:10;animation:pop .35s ease-out}
 .toast .medal{flex:none;width:40px;height:40px;border-radius:50%;display:grid;place-items:center;background:var(--gold);color:#fff}
@@ -204,7 +221,7 @@ function saveAuth(a){ try{ a?localStorage.setItem("quiz-auth",JSON.stringify(a))
 
 /* ---------- Utilitaires ---------- */
 function fmt(iso){ return new Date(iso+"T12:00:00").toLocaleDateString("fr-FR",{day:"numeric",month:"long"}); }
-function el(tag,attrs={},...kids){ const e=document.createElement(tag); for(const [k,v] of Object.entries(attrs)){ if(k==="class") e.className=v; else if(k.startsWith("on")) e.addEventListener(k.slice(2),v); else if(k==="value") e.value=v; else if(v!==false&&v!=null) e.setAttribute(k,v===true?"":v); } for(const c of kids.flat()){ if(c==null||c===false) continue; e.append(c.nodeType?c:document.createTextNode(String(c))); } return e; }
+function el(tag,attrs={},...kids){ const e=document.createElement(tag); for(const [k,v] of Object.entries(attrs)){ if(k==="class") e.className=v; else if(k.startsWith("on")) e.addEventListener(k.slice(2),v); else if(k==="value") e.value=v; else if(v!==false&&v!=null) e.setAttribute(k,v===true?"":v); } for(const c of kids.flat(Infinity)){ if(c==null||c===false) continue; e.append(c.nodeType?c:document.createTextNode(String(c))); } return e; }
 function setTab(t){ S.tab=t; S.review=null; document.querySelectorAll("nav button").forEach(b=>b.setAttribute("aria-selected",b.dataset.tab===t)); render(); window.scrollTo(0,0); if(t==="board") loadBoard(); if(t==="archive") loadArchives(); if(t==="forum") loadForum(); }
 document.querySelectorAll("nav button").forEach(b=>b.addEventListener("click",()=>setTab(b.dataset.tab)));
 
@@ -339,7 +356,7 @@ async function answer(i,k){
 async function loadBoard(){
   try{
     if(!S.prizes) S.prizes=await rpc("prizes_list");
-    if(!S.phase) S.phase=(new Date().toISOString().slice(0,10)<=S.prizes.mid_end)?"mid":"season";
+    if(!S.phase) S.phase="season";
     S.boards=S.boards||{}; S.boards[S.phase]=await rpc("leaderboard",{p_phase:S.phase});
   }catch(e){ S.boards={error:e.message}; }
   if(S.tab==="board") render();
@@ -348,7 +365,7 @@ function renderBoard(){
   if(S.boards&&S.boards.error){ $view.append(el("div",{class:"notice"},S.boards.error)); return; }
   const midEnd=S.prizes?fmt(S.prizes.mid_end):"31 décembre";
   $view.append(el("div",{class:"seg",role:"tablist"},
-    [["mid",`Mi-saison · ${midEnd}`],["season","Saison complète"]].map(([k,t])=>el("button",{"aria-selected":S.phase===k?"true":"false",onclick:()=>{ S.phase=k; render(); if(!(S.boards&&S.boards[k])) loadBoard(); }},t))));
+    [["season","Saison complète"],["mid",`Mi-saison · ${midEnd}`]].map(([k,t])=>el("button",{"aria-selected":S.phase===k?"true":"false",onclick:()=>{ S.phase=k; render(); if(!(S.boards&&S.boards[k])) loadBoard(); }},t))));
   const data=S.boards&&S.boards[S.phase];
   if(!data){ $view.append(el("div",{class:"notice"},"Chargement du classement…")); return; }
   let rank=0,prev=null; const rows=data.map((r,i)=>{ if(r.points!==prev){rank=i+1;prev=r.points;} return {...r,rank}; });
@@ -357,11 +374,18 @@ function renderBoard(){
   $view.append(
     el("div",{class:"card"},el("h3",{},S.phase==="mid"?`Classement de mi-saison · arrêté au ${midEnd}`:"Classement de la saison complète"),
       el("div",{class:"podium"},order.map((r,j)=>r?el("div",{class:"step s"+[2,1,3][j]},el("div",{class:"nm"},r.pseudo),el("div",{class:"block"},r.points)):el("div")))),
-    el("div",{class:"card"},el("ol",{class:"board"},rows.map(r=>el("li",{class:"row"+(r.rank===1?" p1":"")+(r.pseudo.toLowerCase()===me?" mine":"")},
+    el("div",{class:"card"},el("p",{class:"muted",style:"font-size:13px"},"Touche un joueur pour voir ses badges."),el("ol",{class:"board"},rows.map(r=>[el("li",{class:"row"+(r.rank===1?" p1":"")+(r.pseudo.toLowerCase()===me?" mine":""),tabindex:"0",onclick:()=>openPlayer(r.pseudo)},
       el("div",{class:"rank"},r.rank),
       el("div",{style:"min-width:0"},el("div",{class:"name"},r.pseudo),el("div",{class:"sub"},`${r.weeks_played} série${r.weeks_played>1?"s jouées":" jouée"}`+(r.perfect?` · ${r.perfect} sans-faute`:"")+(r.badges?` · ${r.badges} badge${r.badges>1?"s":""}`:""))),
-      el("div",{class:"pts"},r.points,el("small",{},"pts")))))));
+      el("div",{class:"pts"},r.points,el("small",{},"pts"))),
+      S.openPlayer===r.pseudo?el("li",{class:"mini-badges"},S.playerBadges==null?el("span",{},"Chargement…"):S.playerBadges.length?S.playerBadges.map(b=>el("span",{},el("i",{class:"t"+b.tier},icon(b.icon)),b.name)):el("span",{},"Aucun badge pour l'instant")):null]))));
   renderPrizes();
+}
+async function openPlayer(name){
+  if(S.openPlayer===name){ S.openPlayer=null; render(); return; }
+  S.openPlayer=name; S.playerBadges=null; render();
+  try{ S.playerBadges=await rpc("player_badges",{...cred(),p_target:name}); }catch(e){ S.playerBadges=[]; }
+  render();
 }
 function renderPrizes(){
   if(!S.prizes) return;
@@ -411,9 +435,18 @@ function writeSeen(n){ try{ localStorage.setItem("quiz-forum-seen",String(n)); }
 let forumTotal=0;
 async function checkForum(){ try{ forumTotal=await rpc("forum_count"); updateDot(); }catch(e){} }
 function updateDot(){ const b=document.querySelector('nav button[data-tab="forum"]'); if(!b) return; const old=b.querySelector(".dot"); if(old) old.remove(); if(S.tab!=="forum"&&forumTotal>readSeen()) b.append(el("span",{class:"dot","aria-label":"nouveautés"})); }
-async function loadForum(){ try{ S.forum=await rpc("list_posts",cred()); forumTotal=S.forum.filter(f=>f.kind!=="question"||f.answer).length; writeSeen(Math.max(forumTotal,readSeen())); }catch(e){ S.forum={error:e.message}; } if(S.tab==="forum") render(); }
+async function loadForum(){ try{ S.forum=await rpc("list_posts",cred()); forumTotal=S.forum.reduce((n,f)=>n+1+(f.answer?1:0)+(f.comments?f.comments.length:0),0); writeSeen(Math.max(forumTotal,readSeen())); }catch(e){ S.forum={error:e.message}; } if(S.tab==="forum") render(); }
 function when(ts){ return new Date(ts).toLocaleDateString("fr-FR",{day:"numeric",month:"long"}); }
 const KINDS={question:"Question",lecture:"Lecture",video:"Vidéo",lien:"Lien"};
+function replyForm(f){
+  S.replyDraft=S.replyDraft||{};
+  const t=el("textarea",{id:"reply-"+f.id,maxlength:"600",placeholder:f.kind==="question"?"Ta réponse":"Ton commentaire",value:S.replyDraft[f.id]||"",oninput:e=>S.replyDraft[f.id]=e.target.value});
+  const err=el("p",{class:"error"});
+  return el("div",{},el("form",{class:"reply-form",onsubmit:async e=>{ e.preventDefault(); err.textContent="";
+      try{ await rpc("add_comment",{...cred(),p_post:f.id,p_body:t.value}); S.replyDraft[f.id]=""; S.replyTo=null; await loadForum(); loadBadges(); }
+      catch(x){ err.textContent=x.message; } }},t,el("button",{class:"btn small",type:"submit"},"Envoyer")),
+    el("button",{class:"ghost-sm",type:"button",onclick:()=>{S.replyTo=null;render();}},"Annuler"),err);
+}
 function domain(u){ try{ return new URL(u).hostname.replace(/^www\./,""); }catch(e){ return ""; } }
 function renderForum(){
   S.compose=S.compose||"question"; S.filter=S.filter||"tout";
@@ -425,12 +458,12 @@ function renderForum(){
   const err=el("p",{class:"error",role:"alert"}), btn=el("button",{class:"btn",type:"submit"},k==="question"?"Envoyer ma question":"Partager");
   $view.append(el("form",{class:"card ask",onsubmit:async e=>{ e.preventDefault(); err.textContent=""; btn.disabled=true;
       try{ await rpc("share_post",{...cred(),p_kind:k,p_title:k==="question"?null:title.value,p_body:body.value,p_url:k==="question"?null:url.value});
-        S.draft=null; S.flash=k==="question"?"Question envoyée : elle sera visible par tous une fois que j'y aurai répondu.":"Merci pour le partage, c'est en ligne.";
+        S.draft=null; S.flash=k==="question"?"Question publiée : tes collègues peuvent déjà y répondre.":"Merci pour le partage, c'est en ligne.";
         await loadForum(); loadBadges(); }
       catch(x){ err.textContent=x.message; btn.disabled=false; } }},
     el("h2",{},"Partager"),
     el("div",{class:"chips",role:"tablist"},Object.entries(KINDS).map(([key,lab])=>el("button",{type:"button","aria-selected":k===key?"true":"false",onclick:()=>{S.compose=key;render();}},lab))),
-    el("p",{class:"muted",style:"font-size:13px"},k==="question"?"Une question sur un placement, un cas client, une notion du quiz : elle est publiée avec ta réponse, sous ton prénom.":"Un livre, une vidéo, un article ou un outil utile : il est publié tout de suite, sous ton prénom."),
+    el("p",{class:"muted",style:"font-size:13px"},k==="question"?"Une question sur un placement, un cas client, une notion du quiz : elle est publiée tout de suite, sous ton prénom, et tout le monde peut y répondre.":"Un livre, une vidéo, un article ou un outil utile : il est publié tout de suite, sous ton prénom."),
     k!=="question"?el("div",{class:"field"},el("label",{for:"p-title"},"Titre"),title):null,
     k!=="question"?el("div",{class:"field"},el("label",{for:"p-url"},k==="lecture"?"Lien (facultatif)":"Lien"),url):null,
     el("div",{class:"field"},el("label",{for:"p-body"},k==="question"?"Ta question":"Ton avis (facultatif)"),body),
@@ -446,8 +479,15 @@ function renderForum(){
       f.title?(f.url?el("a",{class:"q",href:f.url,target:"_blank",rel:"noopener noreferrer"},f.title):el("div",{class:"q"},f.title)):null,
       f.url?el("div",{class:"meta"},domain(f.url)):null,
       f.body?el("div",{class:f.title?"desc":"q"},f.body):null,
-      f.answer?el("div",{class:"a"},el("b",{},f.kind==="question"?"Réponse":"Le mot de l'organisateur"),f.answer):(f.kind==="question"?el("div",{class:"pending"},"En attente de réponse"):null),
-      (f.kind!=="question"||f.answer)?el("button",{class:"like"+(f.liked?" on":""),"aria-pressed":f.liked?"true":"false",onclick:async()=>{ try{ const r=await rpc("toggle_like",{...cred(),p_id:f.id}); f.liked=!f.liked; f.likes=r.likes; render(); }catch(e){} }},icon("thumb"),`Utile${f.likes?" · "+f.likes:""}`):null
+      f.answer?el("div",{class:"a"},el("b",{},f.kind==="question"?"Réponse de l'organisateur":"Le mot de l'organisateur"),f.answer):null,
+      (f.comments&&f.comments.length)?el("div",{class:"replies"},f.comments.map(c=>el("div",{class:"reply"},
+        el("div",{class:"meta"},el("strong",{},c.mine?"Toi":(c.author||"Un collègue")),when(c.created_at),
+          c.mine?el("button",{class:"ghost-sm danger",onclick:async()=>{ try{ await rpc("delete_my_comment",{...cred(),p_id:c.id}); await loadForum(); }catch(e){} }},"Supprimer"):null),
+        el("div",{},c.body)))):null,
+      S.replyTo===f.id?replyForm(f):null,
+      el("div",{class:"post-actions"},
+        el("button",{class:"like"+(f.liked?" on":""),"aria-pressed":f.liked?"true":"false",onclick:async()=>{ try{ const r=await rpc("toggle_like",{...cred(),p_id:f.id}); f.liked=!f.liked; f.likes=r.likes; loadBadges(); render(); }catch(e){} }},icon("thumb"),`Utile${f.likes?" · "+f.likes:""}`),
+        S.replyTo!==f.id?el("button",{class:"ghost-sm",onclick:()=>{S.replyTo=f.id;render();const t=document.getElementById("reply-"+f.id);if(t)t.focus();}},f.kind==="question"?"Répondre":"Commenter"):null)
     ))):el("div",{class:"notice"},S.filter==="tout"?"Rien pour l'instant. Lance la discussion !":"Rien dans cette catégorie pour l'instant.")));
 }
 
@@ -467,7 +507,26 @@ const ICONS={
  scroll:'<path d="M7 4h11v13a3 3 0 0 1-3 3H6a3 3 0 0 1 0-6h1zM10 8h5M10 11h5"/>',
  chat:'<path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/>',
  book:'<path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2zM4 21V5M8 7h7"/>',
- thumb:'<path d="M7 10v10H4V10zM7 10l4-7a2 2 0 0 1 2 2v4h5.5a2 2 0 0 1 2 2.3l-1.2 7A2 2 0 0 1 17.3 20H7"/>'
+ thumb:'<path d="M7 10v10H4V10zM7 10l4-7a2 2 0 0 1 2 2v4h5.5a2 2 0 0 1 2 2.3l-1.2 7A2 2 0 0 1 17.3 20H7"/>',
+ crown:'<path d="M3 8l4 4 5-7 5 7 4-4-2 11H5z"/>',
+ gem:'<path d="M6 3h12l3 6-9 12L3 9zM3 9h18M9 3l3 18M15 3l-3 18"/>',
+ stars:'<path d="m8 4 1.5 3 3.3.5-2.4 2.3.6 3.2L8 11.5 5 13l.6-3.2-2.4-2.3 3.3-.5zM16 11l1.5 3 3.3.5-2.4 2.3.6 3.2-3-1.5-3 1.5.6-3.2-2.4-2.3 3.3-.5z"/>',
+ bolt:'<path d="M13 2 4 14h7l-1 8 9-12h-7z"/>',
+ target:'<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="1" fill="currentColor"/>',
+ sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
+ moon:'<path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/>',
+ home:'<path d="M3 11 12 4l9 7M5 10v10h14V10M10 20v-6h4v6"/>',
+ umbrella:'<path d="M3 12a9 9 0 0 1 18 0zM12 12v7a2 2 0 0 0 4 0"/>',
+ candles:'<path d="M7 3v3M7 16v5M17 3v6M17 17v4"/><rect x="5" y="6" width="4" height="10" rx="1"/><rect x="15" y="9" width="4" height="8" rx="1"/>',
+ calc:'<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8 7h8M8 12h.01M12 12h.01M16 12h.01M8 16h.01M12 16h.01M16 16h.01"/>',
+ building:'<path d="M4 21V5l8-3v19M12 9h8v12M7 8h2M7 12h2M7 16h2M15 13h2M15 17h2M2 21h20"/>',
+ shield:'<path d="M12 3l7 3v5c0 4.5-3 8.3-7 10-4-1.7-7-5.5-7-10V6z"/><path d="M9 12l2 2 4-4"/>',
+ hand:'<path d="M8 13V5a1.5 1.5 0 0 1 3 0v6M11 11V4a1.5 1.5 0 0 1 3 0v7M14 11V6a1.5 1.5 0 0 1 3 0v8a7 7 0 0 1-7 7 6 6 0 0 1-5-3l-2.5-4.5a1.5 1.5 0 0 1 2.6-1.5L8 15"/>',
+ users:'<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.6 3.4-5.5 6.5-5.5s5.7 1.9 6.5 5.5M16 4.5a3.5 3.5 0 0 1 0 7M18 14.8c1.8.8 3 2.5 3.5 5.2"/>',
+ link:'<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/>',
+ film:'<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 4v16M17 4v16M3 9h4M3 15h4M17 9h4M17 15h4"/>',
+ heart:'<path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/>',
+ megaphone:'<path d="M3 10v4h3l8 5V5L6 10zM18 9a4 4 0 0 1 0 6"/>'
 };
 function icon(name){ const t=document.createElement("template"); t.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'+(ICONS[name]||ICONS.star)+'</svg>'; return t.content.firstChild; }
 const unlocked=b=>b.progress>=b.target;
@@ -476,17 +535,18 @@ async function loadBadges(){ try{ const list=await rpc("my_badges",cred()); cons
   }catch(e){} }
 function toast(b){ const t=el("div",{class:"toast",role:"status"},el("div",{class:"medal"},icon(b.icon)),el("div",{},el("b",{},"Badge débloqué"),b.name));
   document.body.append(t); setTimeout(()=>t.remove(),4500); }
+function badgeButton(b){ const on=unlocked(b);
+  return el("button",{class:`bdg t${b.tier}${on?"":" locked"}`,"aria-label":`${b.name}${on?", débloqué":", verrouillé"}`,onclick:()=>{S.badgeOpen=S.badgeOpen===b.id?null:b.id;render();}},
+    el("div",{class:"medal"},icon(b.icon)),el("div",{class:"nm"},b.name),
+    on?null:el("div",{class:"pg"},el("i",{style:`width:${Math.round(100*b.progress/b.target)}%`}))); }
 function renderBadges(){
   const list=S.badges; if(!list) return;
-  const n=list.filter(unlocked).length;
-  const grid=el("div",{class:"badges"},list.map(b=>{ const on=unlocked(b);
-    return el("button",{class:`bdg t${b.tier}${on?"":" locked"}`,"aria-label":`${b.name}${on?", débloqué":", verrouillé"}`,onclick:()=>{S.badgeOpen=S.badgeOpen===b.id?null:b.id;render();}},
-      el("div",{class:"medal"},icon(b.icon)),el("div",{class:"nm"},b.name),
-      on?null:el("div",{class:"pg"},el("i",{style:`width:${Math.round(100*b.progress/b.target)}%`}))); }));
-  const open=list.find(b=>b.id===S.badgeOpen);
+  const n=list.filter(unlocked).length, open=list.find(b=>b.id===S.badgeOpen);
+  const cats=[...new Set(list.map(b=>b.cat||"Badges"))];
   $view.append(el("div",{class:"card"},el("div",{class:"week-head"},el("h2",{},"Mes badges"),el("span",{class:"pill"},`${n} / ${list.length}`)),
     open?el("div",{class:"bdg-detail"},el("strong",{},open.name),el("p",{},open.desc+(unlocked(open)?" : débloqué.":` (${open.progress} / ${open.target}).`))):el("p",{class:"muted",style:"font-size:13px"},"Touche un badge pour voir comment le débloquer."),
-    grid));
+    cats.map(c=>{ const items=list.filter(b=>(b.cat||"Badges")===c); return el("div",{class:"bcat"},
+      el("h3",{},`${c} · ${items.filter(unlocked).length}/${items.length}`),el("div",{class:"badges"},items.map(badgeButton))); })));
 }
 
 /* ---------- Démarrage ---------- */

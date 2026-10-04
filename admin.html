@@ -73,6 +73,23 @@ p{margin:0}
 .bdg .nm{font-size:12px;font-weight:600;line-height:1.25}
 .bdg .pg{width:80%;height:4px;border-radius:2px;background:var(--line);overflow:hidden}
 .bdg .pg i{display:block;height:100%;background:var(--accent)}
+.btn.small{padding:10px 14px;font-size:14px}
+.bcat{display:flex;flex-direction:column;gap:10px}
+.mini-badges{display:flex;flex-wrap:wrap;gap:6px;padding:4px 0 2px 46px}
+.mini-badges span{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;padding:3px 9px 3px 4px;border-radius:99px;background:var(--bg)}
+.mini-badges i{width:20px;height:20px;border-radius:50%;display:grid;place-items:center;color:#fff;background:var(--gold)}
+.mini-badges i.t1{background:var(--bronze)} .mini-badges i.t2{background:var(--silver)}
+.mini-badges svg{width:12px;height:12px}
+.row{cursor:pointer}
+.replies{display:flex;flex-direction:column;gap:8px;border-left:2px solid var(--line);padding-left:12px}
+.reply{font-size:14px;display:flex;flex-direction:column;gap:2px}
+.reply .meta{font-size:12px;color:var(--muted);display:flex;gap:8px}
+.reply-form{display:flex;gap:8px;align-items:flex-end}
+.reply-form textarea{flex:1;min-height:44px;padding:10px 12px;border-radius:12px;border:1.5px solid var(--line);background:var(--bg);color:var(--ink);font:500 14px/1.4 var(--body);resize:vertical}
+.reply-form textarea:focus{outline:none;border-color:var(--accent)}
+.post-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.ghost-sm{all:unset;cursor:pointer;font:600 13px var(--body);color:var(--accent);padding:6px 4px}
+.ghost-sm.danger{color:var(--bad)}
 .bdg-detail{background:var(--accent-soft);border-radius:12px;padding:12px 14px;font-size:14px}
 .toast{position:fixed;left:16px;right:16px;bottom:calc(84px + env(safe-area-inset-bottom,0px));max-width:488px;margin:0 auto;background:var(--ink);color:var(--bg);border-radius:14px;padding:12px 14px;display:flex;gap:12px;align-items:center;box-shadow:0 8px 24px rgba(0,0,0,.25);z-index:10;animation:pop .35s ease-out}
 .toast .medal{flex:none;width:40px;height:40px;border-radius:50%;display:grid;place-items:center;background:var(--gold);color:#fff}
@@ -355,7 +372,7 @@ function renderForum(){
   const list=S.forum||[], pending=list.filter(f=>f.kind==="question"&&!f.answer);
   const card=el("div",{class:"card"},el("h2",{},"Espace de partage"),
     el("p",{class:"muted"},pending.length?`${pending.length} question${pending.length>1?"s":""} en attente de réponse.`:"Toutes les questions ont une réponse."),
-    el("p",{class:"muted",style:"font-size:13px"},"Les questions n'apparaissent aux joueurs qu'une fois que tu y as répondu. Les lectures, vidéos et liens sont publiés directement : tu peux y ajouter un commentaire, les masquer ou les supprimer."));
+    el("p",{class:"muted",style:"font-size:13px"},"Tout est publié directement, et les joueurs peuvent se répondre entre eux. Ta réponse apparaît comme « Réponse de l'organisateur ». Tu peux masquer ou supprimer une publication ou une réponse."));
   if(!list.length) card.append(el("div",{class:"notice"},"Aucune publication pour l'instant."));
   list.forEach(f=>{
     const isQ=f.kind==="question";
@@ -364,7 +381,11 @@ function renderForum(){
         f.hidden?el("span",{class:"badge warn"},"masquée"):null, isQ&&!f.answer?el("span",{class:"badge live"},"à répondre"):null, f.likes?el("span",{},`${f.likes} « utile »`):null),
       f.title?el("div",{class:"q"},f.title):null,
       f.url?el("a",{href:f.url,target:"_blank",rel:"noopener noreferrer",style:"color:var(--accent);font-size:13px;word-break:break-all"},f.url):null,
-      f.body?el("div",{class:f.title?"":"q"},f.body):null);
+      f.body?el("div",{class:f.title?"":"q"},f.body):null,
+      (f.comments&&f.comments.length)?el("div",{style:"display:flex;flex-direction:column;gap:6px;border-left:2px solid var(--line);padding-left:10px"},f.comments.map(c=>el("div",{style:"font-size:14px"},
+        el("div",{class:"meta"},el("strong",{},c.author||"Joueur supprimé"),when(c.created_at),
+          el("button",{class:"link danger",style:"font-size:12px",onclick:async()=>{ await rpc("admin_delete_comment",{p_pass:S.pass,p_id:c.id}); await refresh(); S.flash="Réponse supprimée."; render(); }},"Supprimer")),
+        el("div",{},c.body)))):null);
     if(S.answering===f.id||(isQ&&!f.answer)){
       const box=el("textarea",{id:"ans-"+f.id,value:f.answer||"",placeholder:isQ?"Ta réponse, visible par tous les joueurs":"Ton commentaire, visible par tous (laisse vide pour le retirer)"}), err=el("p",{class:"error"});
       const save=el("button",{class:"btn small",onclick:async()=>{ err.textContent=""; save.disabled=true;
