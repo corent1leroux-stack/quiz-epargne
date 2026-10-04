@@ -74,6 +74,18 @@ p{margin:0}
 .bdg .pg{width:80%;height:4px;border-radius:2px;background:var(--line);overflow:hidden}
 .bdg .pg i{display:block;height:100%;background:var(--accent)}
 .btn.small{padding:10px 14px;font-size:14px}
+.by{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--gold)}
+.by svg{width:14px;height:14px}
+.propose select{width:100%;padding:12px 14px;border-radius:12px;border:1.5px solid var(--line);background:var(--bg);color:var(--ink);font:500 15px var(--body)}
+.propose textarea{width:100%;min-height:80px;padding:12px 14px;border-radius:12px;border:1.5px solid var(--line);background:var(--bg);color:var(--ink);font:500 15px/1.45 var(--body);resize:vertical}
+.propose select:focus,.propose textarea:focus{outline:none;border-color:var(--accent)}
+.opt{display:flex;gap:8px;align-items:center}
+.opt input[type=radio]{width:20px;height:20px;flex:none;accent-color:var(--ok)}
+.opt b{width:16px;flex:none}
+.prop{display:flex;flex-direction:column;gap:6px;padding:12px 0;border-bottom:1px solid var(--line)}
+.prop:last-child{border-bottom:0}
+.status{align-self:flex-start;font-size:12px;font-weight:700;padding:3px 10px;border-radius:99px;background:var(--line);color:var(--muted)}
+.status.accepted{background:var(--ok-soft);color:var(--ok)} .status.rejected{background:var(--bad-soft);color:var(--bad)}
 .bcat{display:flex;flex-direction:column;gap:10px}
 .mini-badges{display:flex;flex-wrap:wrap;gap:6px;padding:4px 0 2px 46px}
 .mini-badges span{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;padding:3px 9px 3px 4px;border-radius:99px;background:var(--bg)}
@@ -245,7 +257,7 @@ nav button .count{position:absolute;top:3px;right:calc(50% - 22px);min-width:18p
 <script>
 const L=["A","B","C","D"];
 const $view=document.getElementById("view"), $who=document.getElementById("who"), $nav=document.getElementById("nav");
-const S={forum:null,answering:null,confirmDel:null,pass:null,configured:null,data:null,tab:"suivi",week:null,edit:null,player:null,flash:null,error:null};
+const S={props:null,forumView:"posts",pdrafts:{},forum:null,answering:null,confirmDel:null,pass:null,configured:null,data:null,tab:"suivi",week:null,edit:null,player:null,flash:null,error:null};
 
 async function rpc(fn,args={}){
   const h={"Content-Type":"application/json",apikey:SUPABASE_KEY};
@@ -268,7 +280,7 @@ function loadPass(){ try{ return localStorage.getItem("quiz-admin"); }catch(e){ 
 function setTab(t){ S.tab=t; S.edit=null; S.player=null; S.flash=null; S.answering=null; S.confirmDel=null; document.querySelectorAll("nav button").forEach(b=>b.setAttribute("aria-selected",b.dataset.tab===t)); render(); window.scrollTo(0,0); }
 document.querySelectorAll("nav button").forEach(b=>b.addEventListener("click",()=>setTab(b.dataset.tab)));
 
-async function refresh(){ S.forum=await rpc("admin_questions",{p_pass:S.pass}); S.data=await rpc("admin_overview",{p_pass:S.pass}); if(!S.week||!S.data.weeks.find(w=>w.id===S.week)) S.week=currentWeekId(); }
+async function refresh(){ S.forum=await rpc("admin_questions",{p_pass:S.pass}); S.props=await rpc("admin_proposals",{p_pass:S.pass}); S.data=await rpc("admin_overview",{p_pass:S.pass}); if(!S.week||!S.data.weeks.find(w=>w.id===S.week)) S.week=currentWeekId(); }
 function currentWeekId(){ const t=S.data.today, ws=S.data.weeks; const cur=ws.filter(w=>w.start<=t&&t<=w.end).pop(); if(cur) return cur.id; const past=ws.filter(w=>w.start<=t).pop(); return (past||ws[0]||{}).id; }
 
 function render(){
@@ -365,10 +377,14 @@ function renderEdit(w){
 
 /* ---------- Questions des joueurs ---------- */
 function updateCount(){ const b=document.querySelector('nav button[data-tab="forum"]'); if(!b) return; const old=b.querySelector(".count"); if(old) old.remove();
-  const n=(S.forum||[]).filter(f=>f.kind==="question"&&!f.answer).length; if(n) b.append(el("span",{class:"count"},n)); }
+  const n=(S.forum||[]).filter(f=>f.kind==="question"&&!f.answer).length+(S.props||[]).filter(p=>p.status==="pending").length; if(n) b.append(el("span",{class:"count"},n)); }
 function when(ts){ return new Date(ts).toLocaleDateString("fr-FR",{day:"numeric",month:"long"}); }
 const KINDS={question:"Question",lecture:"Lecture",video:"Vidéo",lien:"Lien"};
 function renderForum(){
+  const np=(S.props||[]).filter(p=>p.status==="pending").length, nq=(S.forum||[]).filter(f=>f.kind==="question"&&!f.answer).length;
+  $view.append(el("div",{class:"seg"},[["posts",`Publications${nq?" ("+nq+")":""}`],["props",`Questions proposées${np?" ("+np+")":""}`]].map(([k,t])=>
+    el("button",{"aria-selected":S.forumView===k?"true":"false",onclick:()=>{S.forumView=k;S.flash=null;render();}},t))));
+  if(S.forumView==="props") return renderProposals();
   const list=S.forum||[], pending=list.filter(f=>f.kind==="question"&&!f.answer);
   const card=el("div",{class:"card"},el("h2",{},"Espace de partage"),
     el("p",{class:"muted"},pending.length?`${pending.length} question${pending.length>1?"s":""} en attente de réponse.`:"Toutes les questions ont une réponse."),
@@ -404,6 +420,48 @@ function renderForum(){
       el("button",{class:"btn small danger",onclick:async()=>{ await rpc("admin_delete_question",{p_pass:S.pass,p_id:f.id}); await refresh(); S.confirmDel=null; S.flash="Publication supprimée."; render(); }},"Supprimer"),
       el("button",{class:"link",onclick:()=>{S.confirmDel=null;render();}},"Annuler")));
     card.append(t);
+  });
+  $view.append(card);
+}
+
+
+const PSTATUS={pending:"En attente",accepted:"Intégrée",rejected:"Refusée"};
+function renderProposals(){
+  const list=S.props||[], t=S.data.today;
+  const future=S.data.weeks.filter(w=>w.start>t&&w.counts);
+  const card=el("div",{class:"card"},el("h2",{},"Questions proposées"),
+    el("p",{class:"muted",style:"font-size:13px"},"Corrige la question si besoin, puis choisis la série à venir et la question qu'elle remplace. Elle s'affichera avec le prénom de son auteur. Pense au niveau : les questions 1 à 3 sont faciles, 9 et 10 de niveau expert."));
+  if(!list.length) card.append(el("div",{class:"notice"},"Aucune proposition pour l'instant."));
+  list.forEach(p=>{
+    const box=el("div",{class:"thread"},el("div",{class:"meta"},el("span",{class:"badge"+(p.status==="pending"?" live":"")},PSTATUS[p.status]),el("strong",{},p.author||"Joueur supprimé"),el("span",{},when(p.created_at)),el("span",{},p.theme?`Thème souhaité : ${p.theme}`:"Thème libre")));
+    if(p.status!=="pending"){
+      box.append(el("div",{class:"q"},p.q),
+        p.status==="accepted"?el("p",{class:"muted",style:"font-size:13px"},`${p.week}, question ${p.q_index+1}`):null,
+        p.status==="rejected"&&p.note?el("p",{class:"muted",style:"font-size:13px"},`Ton mot : ${p.note}`):null);
+      card.append(box); return;
+    }
+    const D=S.pdrafts[p.id]=S.pdrafts[p.id]||{q:p.q,choices:[...p.choices],answer:p.answer,explain:p.explain||"",tip:p.tip||"",week:((future.find(w=>w.theme===p.theme)||future[0])||{}).id||"",pos:9,note:""};
+    const q=el("textarea",{value:D.q,oninput:e=>D.q=e.target.value,"aria-label":"Question"});
+    const opts=[0,1,2,3].map(k=>{ const r=el("input",{type:"radio",name:"good-"+p.id,"aria-label":`Réponse ${L[k]} correcte`,onchange:()=>D.answer=k}); if(D.answer===k) r.checked=true;
+      return el("div",{class:"radio"},r,el("span",{style:"font-weight:700;width:16px"},L[k]),el("input",{type:"text",value:D.choices[k],oninput:e=>D.choices[k]=e.target.value,"aria-label":"Réponse "+L[k]})); });
+    const ex=el("textarea",{value:D.explain,placeholder:"Explication affichée après la réponse (obligatoire)",oninput:e=>D.explain=e.target.value,"aria-label":"Explication"});
+    const tip=el("textarea",{value:D.tip,placeholder:"À retenir (facultatif)",style:"min-height:60px",oninput:e=>D.tip=e.target.value,"aria-label":"À retenir"});
+    const wsel=el("select",{onchange:e=>{D.week=e.target.value;render();},"aria-label":"Série"},future.map(w=>{ const o=el("option",{value:w.id},`${w.label} · ${w.theme}`); if(w.id===D.week) o.selected=true; return o; }));
+    const wk=future.find(w=>w.id===D.week);
+    const psel=el("select",{onchange:e=>{D.pos=+e.target.value;render();},"aria-label":"Question remplacée"},(wk?wk.questions:[]).map((qq,i)=>{ const o=el("option",{value:String(i)},`Remplacer la question ${i+1}${qq.by?" (déjà proposée)":""} : ${qq.q.slice(0,60)}${qq.q.length>60?"…":""}`); if(i===D.pos) o.selected=true; return o; }));
+    const note=el("input",{type:"text",placeholder:"Mot pour l'auteur en cas de refus (facultatif)",value:D.note,oninput:e=>D.note=e.target.value});
+    const err=el("p",{class:"error"});
+    box.append(el("div",{class:"field"},el("label",{},"Question"),q),el("div",{class:"field"},el("label",{},"Réponses (coche la bonne)"),opts),
+      el("div",{class:"field"},el("label",{},"Explication"),ex),el("div",{class:"field"},el("label",{},"À retenir"),tip),
+      future.length?el("div",{class:"field"},el("label",{},"Intégrer dans"),wsel,psel):el("div",{class:"notice"},"Plus aucune série à venir."),
+      el("div",{class:"actions"},
+        future.length?el("button",{class:"btn small",onclick:async()=>{ err.textContent="";
+          try{ await rpc("admin_accept_proposal",{p_pass:S.pass,p_id:p.id,p_week:D.week,p_q:D.pos,p_text:D.q,p_choices:D.choices,p_answer:D.answer,p_explain:D.explain,p_tip:D.tip});
+            delete S.pdrafts[p.id]; await refresh(); S.flash="Question intégrée au quiz."; render(); window.scrollTo(0,0); }catch(x){ err.textContent=x.message; } }},"Intégrer au quiz"):null),
+      el("div",{class:"inline"},note,el("button",{class:"btn small danger",onclick:async()=>{ err.textContent="";
+          try{ await rpc("admin_reject_proposal",{p_pass:S.pass,p_id:p.id,p_note:D.note}); delete S.pdrafts[p.id]; await refresh(); S.flash="Proposition refusée."; render(); }catch(x){ err.textContent=x.message; } }},"Refuser")),
+      err);
+    card.append(box);
   });
   $view.append(card);
 }

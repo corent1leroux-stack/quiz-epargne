@@ -74,6 +74,18 @@ p{margin:0}
 .bdg .pg{width:80%;height:4px;border-radius:2px;background:var(--line);overflow:hidden}
 .bdg .pg i{display:block;height:100%;background:var(--accent)}
 .btn.small{padding:10px 14px;font-size:14px}
+.by{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--gold)}
+.by svg{width:14px;height:14px}
+.propose select{width:100%;padding:12px 14px;border-radius:12px;border:1.5px solid var(--line);background:var(--bg);color:var(--ink);font:500 15px var(--body)}
+.propose textarea{width:100%;min-height:80px;padding:12px 14px;border-radius:12px;border:1.5px solid var(--line);background:var(--bg);color:var(--ink);font:500 15px/1.45 var(--body);resize:vertical}
+.propose select:focus,.propose textarea:focus{outline:none;border-color:var(--accent)}
+.opt{display:flex;gap:8px;align-items:center}
+.opt input[type=radio]{width:20px;height:20px;flex:none;accent-color:var(--ok)}
+.opt b{width:16px;flex:none}
+.prop{display:flex;flex-direction:column;gap:6px;padding:12px 0;border-bottom:1px solid var(--line)}
+.prop:last-child{border-bottom:0}
+.status{align-self:flex-start;font-size:12px;font-weight:700;padding:3px 10px;border-radius:99px;background:var(--line);color:var(--muted)}
+.status.accepted{background:var(--ok-soft);color:var(--ok)} .status.rejected{background:var(--bad-soft);color:var(--bad)}
 .bcat{display:flex;flex-direction:column;gap:10px}
 .mini-badges{display:flex;flex-wrap:wrap;gap:6px;padding:4px 0 2px 46px}
 .mini-badges span{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;padding:3px 9px 3px 4px;border-radius:99px;background:var(--bg)}
@@ -199,7 +211,7 @@ nav svg{display:block;margin:0 auto 3px;width:20px;height:20px}
 <script>
 const L=["A","B","C","D"];
 const $view=document.getElementById("view"), $who=document.getElementById("who"), $nav=document.getElementById("nav");
-const S={cur:null,pending:null,phase:null,boards:null,compose:null,filter:null,flash:null,badges:null,badgeOpen:null,forum:null,forumSeen:0,prizes:null,auth:null,tab:"quiz",week:null,nextStart:null,mine:[],qIndex:null,busy:false,board:null,archives:null,review:null,error:null};
+const S={proposals:null,themes:null,proposeOpen:false,pdraft:null,cur:null,pending:null,phase:null,boards:null,compose:null,filter:null,flash:null,badges:null,badgeOpen:null,forum:null,forumSeen:0,prizes:null,auth:null,tab:"quiz",week:null,nextStart:null,mine:[],qIndex:null,busy:false,board:null,archives:null,review:null,error:null};
 
 /* ---------- Accès à la base (fonctions Supabase) ---------- */
 async function rpc(fn,args={}){
@@ -313,13 +325,14 @@ function renderQuiz(){
       el("p",{},sc===n?"Sans faute. Bravo.":sc>=0.7*n?"Beau score. Les corrections détaillées sont dans ton parcours.":"Relis les corrections dans ton parcours : elles serviront pour la suite."),
       el("button",{class:"btn ghost",onclick:()=>{setTab("archive");openReview(w.id);}},"Voir les corrections"),
       el("button",{class:"btn",onclick:()=>setTab("board")},"Voir le classement"),
+      el("button",{class:"ghost-sm",onclick:()=>{S.proposeOpen=true;setTab("archive");}},"Une idée de question ? Propose-la"),
       el("p",{class:"muted",style:"font-size:13px;text-align:center"},`${w.finished} participant${w.finished>1?"s ont":" a"} terminé la série.`));
     $view.append(card); return;
   }
   // Correction de la question qui vient d'être jouée
   if(S.qIndex!==null){
     const i=S.qIndex, a=mine[i], last=mine.length>=n;
-    card.append(el("div",{class:"qnum"},el("span",{},`Question ${i+1} sur ${n}`),levelTag(i,n)),el("div",{class:"question"},a.text));
+    card.append(el("div",{class:"qnum"},el("span",{},`Question ${i+1} sur ${n}`),levelTag(i,n)),el("div",{class:"question"},a.text),byLine(a.by));
     card.append(el("div",{class:"choices"},a.choices.map((c,k)=>{ let cls="choice"; if(k===a.answer) cls+=" right"; else if(k===a.choice) cls+=" wrong";
       return el("button",{class:cls,disabled:true},el("span",{class:"k"},L[k]),el("span",{},c)); })));
     card.append(el("div",{class:"explain"},el("b",{},a.choice===-1?"Temps écoulé":a.correct?"Bonne réponse":"Mauvaise réponse"),a.explain));
@@ -333,7 +346,7 @@ function renderQuiz(){
     const q=S.cur;
     card.append(el("div",{class:"qnum"},el("span",{},`Question ${i+1} sur ${n}`),levelTag(i,n)),
       el("div",{class:"timer"},el("div",{class:"track"},el("div",{class:"bar",id:"tbar"})),el("span",{id:"tsec"},Math.ceil(remaining())+" s")),
-      el("div",{class:"question"},q.text),
+      el("div",{class:"question"},q.text),byLine(q.by),
       el("div",{class:"choices"},q.choices.map((c,k)=>el("button",{class:"choice",disabled:S.busy,onclick:()=>answer(i,k)},el("span",{class:"k"},L[k]),el("span",{},c)))));
     $view.append(card); return;
   }
@@ -397,7 +410,7 @@ function renderPrizes(){
 }
 
 /* ---------- Archives et corrections ---------- */
-async function loadArchives(){ try{ await loadBadges(); S.archives=await rpc("archives",cred()); }catch(e){ S.archives={error:e.message}; } if(S.tab==="archive") render(); }
+async function loadArchives(){ try{ await loadBadges(); loadProposals(); S.archives=await rpc("archives",cred()); }catch(e){ S.archives={error:e.message}; } if(S.tab==="archive") render(); }
 async function openReview(id){ S.review={loading:true}; render(); try{ S.review=await rpc("corrections",{...cred(),p_week:id}); }catch(e){ S.review={error:e.message}; } render(); }
 function renderArchive(){
   if(S.review){
@@ -407,12 +420,13 @@ function renderArchive(){
     const r=S.review, card=el("div",{class:"card"},back,el("h3",{},r.label),el("h2",{},r.theme));
     r.items.forEach((it,i)=>{ const ok=it.choice===it.answer;
       card.append(el("div",{class:"review"},el("span",{class:"tag "+(it.choice==null?"":ok?"ok":"bad")},it.choice==null?"Non répondu":it.choice===-1?"Temps écoulé":ok?"Juste":"Faux"),
-        el("strong",{},`${i+1}. ${it.q}`),el("p",{},`Réponse : ${L[it.answer]}. ${it.choices[it.answer]}`),
+        el("strong",{},`${i+1}. ${it.q}`),byLine(it.by),el("p",{},`Réponse : ${L[it.answer]}. ${it.choices[it.answer]}`),
         it.choice!=null&&it.choice>=0&&!ok?el("p",{class:"muted"},`Ta réponse : ${L[it.choice]}. ${it.choices[it.choice]}`):null,
         el("p",{class:"muted"},it.explain),
         it.tip?el("div",{class:"tip"},el("b",{},"À retenir"),it.tip):null)); });
     $view.append(card); return;
   }
+  renderPropose();
   renderBadges();
   if(!S.archives){ $view.append(el("div",{class:"notice"},"Chargement des archives…")); return; }
   if(S.archives.error){ $view.append(el("div",{class:"notice"},S.archives.error)); return; }
@@ -422,6 +436,8 @@ function renderArchive(){
       el("div",{class:"muted",style:"font-size:13px"},w.answered?`Ton score : ${w.score} / ${w.total}`:"Pas joué")),
       el("button",{onclick:()=>openReview(w.id)},"Corrections"))))));
 }
+
+function byLine(by){ return by?el("div",{class:"by"},icon("feather"),`Question proposée par ${by}`):null; }
 
 /* ---------- Niveau de difficulté ---------- */
 // Séries de 10 : questions 1-3 faciles, 4-6 intermédiaires, 7-8 difficiles, 9-10 expert
@@ -526,7 +542,9 @@ const ICONS={
  link:'<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/>',
  film:'<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 4v16M17 4v16M3 9h4M3 15h4M17 9h4M17 15h4"/>',
  heart:'<path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/>',
- megaphone:'<path d="M3 10v4h3l8 5V5L6 10zM18 9a4 4 0 0 1 0 6"/>'
+ megaphone:'<path d="M3 10v4h3l8 5V5L6 10zM18 9a4 4 0 0 1 0 6"/>',
+ pen:'<path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16z"/><path d="M13.5 6.5l4 4"/>',
+ feather:'<path d="M20 4c-6 0-12 4-13 13l-3 3M7 17h6c3 0 6-3 7-7h-5"/>'
 };
 function icon(name){ const t=document.createElement("template"); t.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'+(ICONS[name]||ICONS.star)+'</svg>'; return t.content.firstChild; }
 const unlocked=b=>b.progress>=b.target;
@@ -544,9 +562,56 @@ function renderBadges(){
   const n=list.filter(unlocked).length, open=list.find(b=>b.id===S.badgeOpen);
   const cats=[...new Set(list.map(b=>b.cat||"Badges"))];
   $view.append(el("div",{class:"card"},el("div",{class:"week-head"},el("h2",{},"Mes badges"),el("span",{class:"pill"},`${n} / ${list.length}`)),
-    open?el("div",{class:"bdg-detail"},el("strong",{},open.name),el("p",{},open.desc+(unlocked(open)?" : débloqué.":` (${open.progress} / ${open.target}).`))):el("p",{class:"muted",style:"font-size:13px"},"Touche un badge pour voir comment le débloquer."),
-    cats.map(c=>{ const items=list.filter(b=>(b.cat||"Badges")===c); return el("div",{class:"bcat"},
+    !S.allBadges?el("div",{class:"badges"},list.filter(unlocked).map(badgeButton)):null,
+    !S.allBadges&&!n?el("p",{class:"muted"},"Aucun badge pour l'instant : réponds à ta première question pour débloquer le premier."):null,
+    el("button",{class:"btn ghost",onclick:()=>{S.allBadges=!S.allBadges;S.badgeOpen=null;render();}},S.allBadges?"Masquer les badges à débloquer":`Voir les ${list.length} badges et comment les débloquer`),
+    open?el("div",{class:"bdg-detail"},el("strong",{},open.name),el("p",{},open.desc+(unlocked(open)?" : débloqué.":` (${open.progress} / ${open.target}).`))):null,
+    !S.allBadges?null:cats.map(c=>{ const items=list.filter(b=>(b.cat||"Badges")===c); return el("div",{class:"bcat"},
       el("h3",{},`${c} · ${items.filter(unlocked).length}/${items.length}`),el("div",{class:"badges"},items.map(badgeButton))); })));
+}
+
+/* ---------- Proposer une question ---------- */
+async function loadProposals(){
+  try{ const [mine,themes]=await Promise.all([rpc("my_proposals",cred()),rpc("future_themes")]); S.proposals=mine; S.themes=themes; }
+  catch(e){ S.proposals={error:e.message}; }
+  if(S.tab==="archive"&&!S.review) render();
+}
+const PSTATUS={pending:"En attente",accepted:"Retenue",rejected:"Non retenue"};
+function renderPropose(){
+  const P=S.pdraft=S.pdraft||{theme:"",q:"",choices:["","","",""],answer:null,explain:"",tip:""};
+  const card=el("div",{class:"card propose"},el("h2",{},"Propose ta question"),
+    el("p",{class:"muted"},"Une question qui t'a fait réfléchir, un piège fréquent en rendez-vous ? Propose-la : si elle est retenue, elle sera jouée par toute l'agence avec ton prénom."));
+  if(!S.proposeOpen){
+    card.append(el("button",{class:"btn",onclick:()=>{S.proposeOpen=true;render();}},"Proposer une question"));
+  } else {
+    const theme=el("select",{id:"pp-theme",onchange:e=>P.theme=e.target.value},el("option",{value:""},"Thème libre"),
+      (Array.isArray(S.themes)?S.themes:[]).map(t=>{ const o=el("option",{value:t.theme},`${t.theme} (à partir du ${fmt(t.start)})`); if(P.theme===t.theme) o.selected=true; return o; }));
+    const q=el("textarea",{id:"pp-q",maxlength:"400",placeholder:"Ex. Quel est le plafond du PEA jeune ?",value:P.q,oninput:e=>P.q=e.target.value});
+    const opts=[0,1,2,3].map(k=>{ const r=el("input",{type:"radio",name:"pp-good",id:"pp-r"+k,"aria-label":`Réponse ${L[k]} correcte`,onchange:()=>P.answer=k}); if(P.answer===k) r.checked=true;
+      return el("div",{class:"opt"},r,el("b",{},L[k]),el("input",{type:"text",id:"pp-c"+k,maxlength:"200",placeholder:k===0?"Réponse":"Autre réponse",value:P.choices[k],oninput:e=>P.choices[k]=e.target.value})); });
+    const ex=el("textarea",{id:"pp-ex",maxlength:"1000",placeholder:"Pourquoi c'est la bonne réponse (facultatif, mais très apprécié)",value:P.explain,oninput:e=>P.explain=e.target.value});
+    const err=el("p",{class:"error",role:"alert"}), btn=el("button",{class:"btn",type:"submit"},"Envoyer ma proposition");
+    card.append(el("form",{style:"display:flex;flex-direction:column;gap:14px",onsubmit:async e=>{ e.preventDefault(); err.textContent="";
+        if(P.answer===null){ err.textContent="Coche la bonne réponse."; return; }
+        btn.disabled=true;
+        try{ await rpc("propose_question",{...cred(),p_theme:P.theme,p_q:P.q,p_choices:P.choices,p_answer:P.answer,p_explain:P.explain,p_tip:""});
+          S.pdraft=null; S.proposeOpen=false; S.flash="Merci ! Ta proposition est envoyée : tu verras ici si elle est retenue."; await loadProposals(); loadBadges(); }
+        catch(x){ err.textContent=x.message; btn.disabled=false; } }},
+      el("div",{class:"field"},el("label",{for:"pp-theme"},"Thème"),theme),
+      el("div",{class:"field"},el("label",{for:"pp-q"},"Question"),q),
+      el("div",{class:"field"},el("label",{},"Les 4 réponses (coche la bonne)"),opts),
+      el("div",{class:"field"},el("label",{for:"pp-ex"},"Explication"),ex),
+      err,btn,el("button",{class:"btn ghost",type:"button",onclick:()=>{S.proposeOpen=false;render();}},"Annuler")));
+  }
+  if(S.flash){ card.append(el("p",{class:"okmsg"},S.flash)); S.flash=null; }
+  const list=Array.isArray(S.proposals)?S.proposals:[];
+  if(list.length) card.append(el("h3",{},"Mes propositions"),el("div",{},list.map(p=>el("div",{class:"prop"},
+    el("span",{class:"status "+p.status},PSTATUS[p.status]),
+    el("strong",{},p.q),
+    p.status==="accepted"?el("p",{class:"muted",style:"font-size:13px"},`Au programme de la ${p.week} (${p.week_theme}), à partir du ${fmt(p.week_start)}.`):null,
+    p.status==="rejected"&&p.note?el("p",{class:"muted",style:"font-size:13px"},`Le mot de l'organisateur : ${p.note}`):null,
+    p.status==="pending"?el("button",{class:"ghost-sm danger",style:"align-self:flex-start",onclick:async()=>{ try{ await rpc("withdraw_proposal",{...cred(),p_id:p.id}); await loadProposals(); }catch(e){} }},"Retirer"):null))));
+  $view.append(card);
 }
 
 /* ---------- Démarrage ---------- */
