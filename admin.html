@@ -249,6 +249,7 @@ textarea:focus,select:focus{outline:none;border-color:var(--accent)}
 .btn.danger{background:var(--bad);color:#fff}
 .radio{display:flex;align-items:center;gap:8px}
 .radio input{width:auto}
+.radio input[type=text]{flex:1;min-width:0}
 .ok-msg{color:var(--ok);font-size:14px;font-weight:600}
 .qstat .badge{align-self:flex-start}
 .back{display:inline-block;margin-top:8px;font:600 13px var(--body);color:var(--accent);text-decoration:none}
@@ -488,10 +489,23 @@ function renderProposals(){
         p.status==="rejected"&&p.note?el("p",{class:"muted",style:"font-size:13px"},`Ton mot : ${p.note}`):null);
       card.append(box); return;
     }
-    const D=S.pdrafts[p.id]=S.pdrafts[p.id]||{q:p.q,choices:[...p.choices],answer:p.answer,explain:p.explain||"",tip:p.tip||"",week:((future.find(w=>w.theme===p.theme)||future[0])||{}).id||"",pos:9,note:""};
+    const k=p.kind||"qcm";
+    const D=S.pdrafts[p.id]=S.pdrafts[p.id]||{q:p.q,choices:p.choices?[...p.choices]:[],answer:p.answer,good:p.answer_json?[...p.answer_json]:[],num:p.answer_num!=null?String(p.answer_num):"",tol:p.tol?String(p.tol):"",unit:p.unit||"",explain:p.explain||"",tip:p.tip||"",week:((future.find(w=>w.theme===p.theme)||future[0])||{}).id||"",pos:9,note:""};
     const q=el("textarea",{value:D.q,oninput:e=>D.q=e.target.value,"aria-label":"Question"});
-    const opts=[0,1,2,3].map(k=>{ const r=el("input",{type:"radio",name:"good-"+p.id,"aria-label":`Réponse ${L[k]} correcte`,onchange:()=>D.answer=k}); if(D.answer===k) r.checked=true;
-      return el("div",{class:"radio"},r,el("span",{style:"font-weight:700;width:16px"},L[k]),el("input",{type:"text",value:D.choices[k],oninput:e=>D.choices[k]=e.target.value,"aria-label":"Réponse "+L[k]})); });
+    let opts=null;
+    if(k==="qcm") opts=el("div",{class:"field"},el("label",{},"Réponses (coche la bonne)"),[0,1,2,3].map(i=>{ const r=el("input",{type:"radio",name:"good-"+p.id,"aria-label":`Réponse ${L[i]} correcte`,onchange:()=>D.answer=i}); if(D.answer===i) r.checked=true;
+      return el("div",{class:"radio"},r,el("span",{style:"font-weight:700;width:16px"},L[i]),el("input",{type:"text",value:D.choices[i],oninput:e=>D.choices[i]=e.target.value,"aria-label":"Réponse "+L[i]})); }));
+    if(k==="vf") opts=el("div",{class:"field"},el("label",{},"L'affirmation est"),el("div",{class:"radio"},
+      ...[[0,"Vraie"],[1,"Fausse"]].map(([v,lab])=>{ const r=el("input",{type:"radio",name:"vf-"+p.id,"aria-label":lab,onchange:()=>D.answer=v}); if(D.answer===v) r.checked=true; return [r,el("span",{style:"margin-right:14px"},lab)]; }).flat()));
+    if(k==="num") opts=el("div",{class:"field"},el("label",{},"Bonne réponse, unité et marge acceptée"),
+      el("div",{class:"radio"},el("input",{type:"text",value:D.num,oninput:e=>D.num=e.target.value,"aria-label":"Bonne réponse"}),el("input",{type:"text",value:D.unit,style:"max-width:80px",oninput:e=>D.unit=e.target.value,"aria-label":"Unité"})),
+      el("input",{type:"text",value:D.tol,placeholder:"Marge (0 = exact)",oninput:e=>D.tol=e.target.value,"aria-label":"Marge acceptée"}));
+    if(k==="multi") opts=el("div",{class:"field"},el("label",{},"Réponses (coche toutes les bonnes)"),D.choices.map((c,i)=>el("div",{class:"radio"},
+      el("input",{type:"checkbox",checked:D.good.includes(i),"aria-label":`Réponse ${i+1} correcte`,onchange:e=>{ const x=D.good.indexOf(i); e.target.checked?(x<0&&D.good.push(i)):(x>=0&&D.good.splice(x,1)); }}),
+      el("input",{type:"text",value:c,oninput:e=>D.choices[i]=e.target.value,"aria-label":"Réponse "+(i+1)}))));
+    if(k==="order") opts=el("div",{class:"field"},el("label",{},`Éléments dans le bon ordre${p.first?` (1 = ${p.first}, dernier = ${p.last||"…"})`:""}`),D.choices.map((c,i)=>el("div",{class:"radio"},
+      el("span",{style:"font-weight:700;width:16px"},String(i+1)),el("input",{type:"text",value:c,oninput:e=>D.choices[i]=e.target.value,"aria-label":"Élément "+(i+1)}))),
+      el("p",{class:"muted",style:"font-size:12px"},"Ils seront mélangés automatiquement à l'affichage."));
     const ex=el("textarea",{value:D.explain,placeholder:"Explication affichée après la réponse (obligatoire)",oninput:e=>D.explain=e.target.value,"aria-label":"Explication"});
     const tip=el("textarea",{value:D.tip,placeholder:"À retenir (facultatif)",style:"min-height:60px",oninput:e=>D.tip=e.target.value,"aria-label":"À retenir"});
     const wsel=el("select",{onchange:e=>{D.week=e.target.value;render();},"aria-label":"Série"},future.map(w=>{ const o=el("option",{value:w.id},`${w.label} · ${w.theme}`); if(w.id===D.week) o.selected=true; return o; }));
@@ -499,12 +513,15 @@ function renderProposals(){
     const psel=el("select",{onchange:e=>{D.pos=+e.target.value;render();},"aria-label":"Question remplacée"},(wk?wk.questions:[]).map((qq,i)=>{ const o=el("option",{value:String(i)},`Remplacer la question ${i+1}${qq.by?" (déjà proposée)":""} : ${qq.q.slice(0,60)}${qq.q.length>60?"…":""}`); if(i===D.pos) o.selected=true; return o; }));
     const note=el("input",{type:"text",placeholder:"Mot pour l'auteur en cas de refus (facultatif)",value:D.note,oninput:e=>D.note=e.target.value});
     const err=el("p",{class:"error"});
-    box.append(el("div",{class:"field"},el("label",{},"Question"),q),el("div",{class:"field"},el("label",{},"Réponses (coche la bonne)"),opts),
+    box.append(el("span",{class:"badge"},FMT[k]),el("div",{class:"field"},el("label",{},k==="vf"?"Affirmation":"Question"),q),opts,
       el("div",{class:"field"},el("label",{},"Explication"),ex),el("div",{class:"field"},el("label",{},"À retenir"),tip),
       future.length?el("div",{class:"field"},el("label",{},"Intégrer dans"),wsel,psel):el("div",{class:"notice"},"Plus aucune série à venir."),
       el("div",{class:"actions"},
         future.length?el("button",{class:"btn small",onclick:async()=>{ err.textContent="";
-          try{ await rpc("admin_accept_proposal",{p_pass:S.pass,p_id:p.id,p_week:D.week,p_q:D.pos,p_text:D.q,p_choices:D.choices,p_answer:D.answer,p_explain:D.explain,p_tip:D.tip});
+          const num=v=>{ const x=String(v).replace(/[\s\u00a0\u202f€%]/g,"").replace(",","."); return x===""||isNaN(+x)?null:+x; };
+          try{ await rpc("admin_accept_proposal",{p_pass:S.pass,p_id:p.id,p_week:D.week,p_q:D.pos,p_text:D.q,
+              p_choices:(k==="qcm"||k==="multi"||k==="order")?D.choices:null,p_answer:(k==="qcm"||k==="vf")?D.answer:null,p_explain:D.explain,p_tip:D.tip,
+              p_answer_json:k==="multi"?[...D.good].sort((x,y)=>x-y):null,p_answer_num:k==="num"?num(D.num):null,p_tol:k==="num"?(num(D.tol)||0):null,p_unit:k==="num"?D.unit:null});
             delete S.pdrafts[p.id]; await refresh(); S.flash="Question intégrée au quiz."; render(); window.scrollTo(0,0); }catch(x){ err.textContent=x.message; } }},"Intégrer au quiz"):null),
       el("div",{class:"inline"},note,el("button",{class:"btn small danger",onclick:async()=>{ err.textContent="";
           try{ await rpc("admin_reject_proposal",{p_pass:S.pass,p_id:p.id,p_note:D.note}); delete S.pdrafts[p.id]; await refresh(); S.flash="Proposition refusée."; render(); }catch(x){ err.textContent=x.message; } }},"Refuser")),

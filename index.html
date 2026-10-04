@@ -99,6 +99,8 @@ div.choice{cursor:default}
 .propose textarea{width:100%;min-height:80px;padding:12px 14px;border-radius:12px;border:1.5px solid var(--line);background:var(--bg);color:var(--ink);font:500 15px/1.45 var(--body);resize:vertical}
 .propose select:focus,.propose textarea:focus{outline:none;border-color:var(--accent)}
 .opt{display:flex;gap:8px;align-items:center}
+.opt input[type=checkbox]{width:20px;height:20px;flex:none;accent-color:var(--ok)}
+.labrow{display:flex;gap:8px}.labrow input{flex:1;min-width:0}
 .opt input[type=radio]{width:20px;height:20px;flex:none;accent-color:var(--ok)}
 .opt b{width:16px;flex:none}
 .prop{display:flex;flex-direction:column;gap:6px;padding:12px 0;border-bottom:1px solid var(--line)}
@@ -669,35 +671,68 @@ async function loadProposals(){
   if(S.tab==="forum") render();
 }
 const PSTATUS={pending:"En attente",accepted:"Retenue",rejected:"Non retenue"};
+const PKINDS=[["qcm","QCM"],["vf","Vrai ou faux"],["num","Réponse à taper"],["multi","Plusieurs réponses"],["order","Classement"]];
+const PHELP={qcm:"4 réponses, une seule bonne.",vf:"Une affirmation : le joueur dit si elle est vraie ou fausse.",num:"Le joueur tape un nombre : plafond, taux, durée, résultat d'un calcul…",multi:"De 4 à 6 réponses, dont plusieurs bonnes : le joueur doit cocher toutes les bonnes.",order:"De 3 à 5 éléments à remettre dans l'ordre : écris-les dans le bon ordre, ils seront mélangés à l'affichage."};
+function newDraft(kind){ return {kind,theme:(S.pdraft&&S.pdraft.theme)||"",q:"",choices:kind==="multi"?["","","",""]:kind==="order"?["","",""]:["","","",""],answer:null,good:[],num:"",tol:"",unit:"€",first:"",last:"",explain:""}; }
 function renderPropose(){
-  const P=S.pdraft=S.pdraft||{theme:"",q:"",choices:["","","",""],answer:null,explain:"",tip:""};
+  const P=S.pdraft=S.pdraft||newDraft("qcm"), k=P.kind;
   const card=el("div",{class:"card propose"},el("h2",{},"Partager"),composeChips("quiz"),
     el("p",{class:"muted",style:"font-size:13px"},"Une question qui t'a fait réfléchir, un piège fréquent en rendez-vous ? Propose-la pour le quiz : si elle est retenue, elle sera jouée par toute l'agence avec ton prénom. Elle n'est pas publiée ici, pour ne pas dévoiler la réponse."));
-  {
-    const theme=el("select",{id:"pp-theme",onchange:e=>P.theme=e.target.value},el("option",{value:""},"Thème libre"),
-      (Array.isArray(S.themes)?S.themes:[]).map(t=>{ const o=el("option",{value:t.theme},`${t.theme} (à partir du ${fmt(t.start)})`); if(P.theme===t.theme) o.selected=true; return o; }));
-    const q=el("textarea",{id:"pp-q",maxlength:"400",placeholder:"Ex. Quel est le plafond du PEA jeune ?",value:P.q,oninput:e=>P.q=e.target.value});
-    const opts=[0,1,2,3].map(k=>{ const r=el("input",{type:"radio",name:"pp-good",id:"pp-r"+k,"aria-label":`Réponse ${L[k]} correcte`,onchange:()=>P.answer=k}); if(P.answer===k) r.checked=true;
-      return el("div",{class:"opt"},r,el("b",{},L[k]),el("input",{type:"text",id:"pp-c"+k,maxlength:"200",placeholder:k===0?"Réponse":"Autre réponse",value:P.choices[k],oninput:e=>P.choices[k]=e.target.value})); });
-    const ex=el("textarea",{id:"pp-ex",maxlength:"1000",placeholder:"Pourquoi c'est la bonne réponse (facultatif, mais très apprécié)",value:P.explain,oninput:e=>P.explain=e.target.value});
-    const err=el("p",{class:"error",role:"alert"}), btn=el("button",{class:"btn",type:"submit"},"Envoyer ma proposition");
-    card.append(el("form",{style:"display:flex;flex-direction:column;gap:14px",onsubmit:async e=>{ e.preventDefault(); err.textContent="";
-        if(P.answer===null){ err.textContent="Coche la bonne réponse."; return; }
-        btn.disabled=true;
-        try{ await rpc("propose_question",{...cred(),p_theme:P.theme,p_q:P.q,p_choices:P.choices,p_answer:P.answer,p_explain:P.explain,p_tip:""});
-          S.pdraft=null; S.flash="Merci ! Ta proposition est envoyée : tu verras ci-dessous si elle est retenue."; await loadProposals(); loadBadges(); }
-        catch(x){ err.textContent=x.message; btn.disabled=false; } }},
-      el("div",{class:"field"},el("label",{for:"pp-theme"},"Thème"),theme),
-      el("div",{class:"field"},el("label",{for:"pp-q"},"Question"),q),
-      el("div",{class:"field"},el("label",{},"Les 4 réponses (coche la bonne)"),opts),
-      el("div",{class:"field"},el("label",{for:"pp-ex"},"Explication"),ex),
-      err,btn));
+  const theme=el("select",{id:"pp-theme",onchange:e=>P.theme=e.target.value},el("option",{value:""},"Thème libre"),
+    (Array.isArray(S.themes)?S.themes:[]).map(t=>{ const o=el("option",{value:t.theme},`${t.theme} (à partir du ${fmt(t.start)})`); if(P.theme===t.theme) o.selected=true; return o; }));
+  const q=el("textarea",{id:"pp-q",maxlength:"400",value:P.q,oninput:e=>P.q=e.target.value,
+    placeholder:k==="vf"?"Ex. L'argent placé en assurance vie est bloqué pendant 8 ans.":k==="num"?"Ex. Quel est le plafond du PEA jeune, en euros ?":k==="multi"?"Ex. Lesquels de ces livrets sont exonérés d'impôt ?":k==="order"?"Ex. Classe ces placements du moins risqué au plus risqué.":"Ex. Quel est le plafond du PEA jeune ?"});
+  let answerField=null;
+  if(k==="qcm"){
+    answerField=el("div",{class:"field"},el("label",{},"Les 4 réponses (coche la bonne)"),[0,1,2,3].map(i=>{ const r=el("input",{type:"radio",name:"pp-good",id:"pp-r"+i,"aria-label":`Réponse ${L[i]} correcte`,onchange:()=>P.answer=i}); if(P.answer===i) r.checked=true;
+      return el("div",{class:"opt"},r,el("b",{},L[i]),el("input",{type:"text",id:"pp-c"+i,maxlength:"200",placeholder:i===0?"Réponse":"Autre réponse",value:P.choices[i],oninput:e=>P.choices[i]=e.target.value})); }));
+  } else if(k==="vf"){
+    answerField=el("div",{class:"field"},el("label",{},"Cette affirmation est…"),el("div",{class:"chips"},[[0,"Vraie"],[1,"Fausse"]].map(([v,lab])=>el("button",{type:"button","aria-selected":P.answer===v?"true":"false",onclick:()=>{P.answer=v;render();}},lab))));
+  } else if(k==="num"){
+    answerField=el("div",{class:"field"},el("label",{},"Bonne réponse"),
+      el("div",{class:"numrow"},el("input",{id:"pp-num",type:"text",inputmode:"decimal",placeholder:"Ex. 20000",value:P.num,oninput:e=>P.num=e.target.value}),
+        el("select",{id:"pp-unit","aria-label":"Unité",style:"width:auto",onchange:e=>P.unit=e.target.value},["€","%","ans","mois","jours",""].map(u=>{ const o=el("option",{value:u},u||"sans unité"); if(P.unit===u) o.selected=true; return o; }))),
+      el("label",{for:"pp-tol",style:"margin-top:6px"},"Marge acceptée (facultatif, utile pour un calcul arrondi)"),
+      el("input",{id:"pp-tol",type:"text",inputmode:"decimal",placeholder:"0 = réponse exacte",value:P.tol,oninput:e=>P.tol=e.target.value}));
+  } else if(k==="multi"){
+    answerField=el("div",{class:"field"},el("label",{},"Les réponses (coche toutes les bonnes)"),P.choices.map((c,i)=>el("div",{class:"opt"},
+      el("input",{type:"checkbox","aria-label":`Réponse ${i+1} correcte`,checked:P.good.includes(i),onchange:e=>{ const p=P.good.indexOf(i); e.target.checked?(p<0&&P.good.push(i)):(p>=0&&P.good.splice(p,1)); }}),
+      el("input",{type:"text",maxlength:"200",placeholder:`Réponse ${i+1}`,value:c,oninput:e=>P.choices[i]=e.target.value}),
+      P.choices.length>4?el("button",{type:"button",class:"ghost-sm danger","aria-label":"Retirer",onclick:()=>{ P.choices.splice(i,1); P.good=P.good.filter(g=>g!==i).map(g=>g>i?g-1:g); render(); }},"✕"):null)),
+      P.choices.length<6?el("button",{type:"button",class:"ghost-sm",style:"align-self:flex-start",onclick:()=>{P.choices.push("");render();}},"+ Ajouter une réponse"):null);
+  } else if(k==="order"){
+    answerField=el("div",{class:"field"},el("label",{},"Les éléments, dans le bon ordre"),P.choices.map((c,i)=>el("div",{class:"opt"},el("b",{},String(i+1)),
+      el("input",{type:"text",maxlength:"200",placeholder:i===0?"Premier":`Élément ${i+1}`,value:c,oninput:e=>P.choices[i]=e.target.value}),
+      P.choices.length>3?el("button",{type:"button",class:"ghost-sm danger","aria-label":"Retirer",onclick:()=>{P.choices.splice(i,1);render();}},"✕"):null)),
+      P.choices.length<5?el("button",{type:"button",class:"ghost-sm",style:"align-self:flex-start",onclick:()=>{P.choices.push("");render();}},"+ Ajouter un élément"):null,
+      el("div",{class:"labrow"},el("input",{type:"text",maxlength:"40",placeholder:"1 = … (ex. moins risqué)",value:P.first,oninput:e=>P.first=e.target.value}),
+        el("input",{type:"text",maxlength:"40",placeholder:"Dernier = … (ex. plus risqué)",value:P.last,oninput:e=>P.last=e.target.value})));
   }
+  const ex=el("textarea",{id:"pp-ex",maxlength:"1000",placeholder:"Pourquoi c'est la bonne réponse (facultatif, mais très apprécié)",value:P.explain,oninput:e=>P.explain=e.target.value});
+  const err=el("p",{class:"error",role:"alert"}), btn=el("button",{class:"btn",type:"submit"},"Envoyer ma proposition");
+  card.append(el("form",{style:"display:flex;flex-direction:column;gap:14px",onsubmit:async e=>{ e.preventDefault(); err.textContent="";
+      const args={...cred(),p_theme:P.theme,p_q:P.q,p_choices:null,p_answer:null,p_explain:P.explain,p_tip:"",p_kind:k};
+      if(k==="qcm"){ if(P.answer===null){ err.textContent="Coche la bonne réponse."; return; } args.p_choices=P.choices; args.p_answer=P.answer; }
+      if(k==="vf"){ if(P.answer===null){ err.textContent="Indique si l'affirmation est vraie ou fausse."; return; } args.p_answer=P.answer; }
+      if(k==="num"){ const v=parseNum(P.num); if(v===null){ err.textContent="Indique la bonne réponse sous forme de nombre."; return; } const t=P.tol===""?0:parseNum(P.tol); if(t===null){ err.textContent="La marge doit être un nombre."; return; } args.p_answer_num=v; args.p_tol=t; args.p_unit=P.unit; }
+      if(k==="multi"){ if(!P.good.length){ err.textContent="Coche au moins une bonne réponse."; return; } args.p_choices=P.choices; args.p_answer_json=[...P.good].sort((a,b)=>a-b); }
+      if(k==="order"){ args.p_choices=P.choices; args.p_first=P.first; args.p_last=P.last; }
+      btn.disabled=true;
+      try{ await rpc("propose_question",args);
+        S.pdraft=newDraft(k); S.flash="Merci ! Ta proposition est envoyée : tu verras ci-dessous si elle est retenue."; await loadProposals(); loadBadges(); }
+      catch(x){ err.textContent=x.message; btn.disabled=false; } }},
+    el("div",{class:"field"},el("label",{},"Format"),el("div",{class:"chips small"},PKINDS.map(([key,lab])=>el("button",{type:"button","aria-selected":k===key?"true":"false",onclick:()=>{ if(k!==key){ const keep={theme:P.theme,q:P.q,explain:P.explain}; S.pdraft={...newDraft(key),...keep}; render(); } }},lab))),
+      el("p",{class:"muted",style:"font-size:13px"},PHELP[k])),
+    el("div",{class:"field"},el("label",{for:"pp-theme"},"Thème"),theme),
+    el("div",{class:"field"},el("label",{for:"pp-q"},k==="vf"?"Affirmation":"Question"),q),
+    answerField,
+    el("div",{class:"field"},el("label",{for:"pp-ex"},"Explication"),ex),
+    err,btn));
   if(S.flash){ card.append(el("p",{class:"okmsg"},S.flash)); S.flash=null; }
   const list=Array.isArray(S.proposals)?S.proposals:[];
   if(list.length) card.append(el("h3",{},"Mes propositions"),el("div",{},list.map(p=>el("div",{class:"prop"},
     el("span",{class:"status "+p.status},PSTATUS[p.status]),
-    el("strong",{},p.q),
+    el("span",{class:"muted",style:"font-size:12px"},(PKINDS.find(x=>x[0]===(p.kind||"qcm"))||["","QCM"])[1]),el("strong",{},p.q),
     p.status==="accepted"?el("p",{class:"muted",style:"font-size:13px"},`Au programme de la ${p.week} (${p.week_theme}), à partir du ${fmt(p.week_start)}.`):null,
     p.status==="rejected"&&p.note?el("p",{class:"muted",style:"font-size:13px"},`Le mot de l'organisateur : ${p.note}`):null,
     p.status==="pending"?el("button",{class:"ghost-sm danger",style:"align-self:flex-start",onclick:async()=>{ try{ await rpc("withdraw_proposal",{...cred(),p_id:p.id}); await loadProposals(); }catch(e){} }},"Retirer"):null))));
