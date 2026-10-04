@@ -51,7 +51,19 @@ p{margin:0}
 .dots{display:flex;gap:6px}
 .dots span{flex:1;height:6px;border-radius:3px;background:var(--line)}
 .dots span.ok{background:var(--ok)} .dots span.bad{background:var(--bad)} .dots span.cur{background:var(--accent)}
-.qnum{font:600 13px var(--body);color:var(--accent);font-variant-numeric:tabular-nums}
+.qnum{font:600 13px var(--body);color:var(--accent);font-variant-numeric:tabular-nums;display:flex;justify-content:space-between;gap:10px;align-items:center}
+.level{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--muted)}
+.level i{display:inline-flex;gap:3px} .level i b{width:6px;height:6px;border-radius:50%;background:var(--line)} .level i b.on{background:var(--gold)}
+.ask textarea{width:100%;min-height:96px;padding:12px 14px;border-radius:12px;border:1.5px solid var(--line);background:var(--bg);color:var(--ink);font:500 15px/1.45 var(--body);resize:vertical}
+.ask textarea:focus{outline:none;border-color:var(--accent)}
+.check{display:flex;gap:8px;align-items:center;font-size:14px;color:var(--muted)} .check input{width:auto}
+.thread{display:flex;flex-direction:column;gap:10px;padding:16px 0;border-bottom:1px solid var(--line)}
+.thread:last-child{border-bottom:0}
+.thread .meta{font-size:12px;color:var(--muted)}
+.thread .q{font-weight:600}
+.thread .a{background:var(--accent-soft);border-radius:12px;padding:12px 14px;font-size:14px;white-space:pre-line}
+.thread .a b{display:block;font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--accent);margin-bottom:2px}
+.thread .pending{font-size:13px;color:var(--gold);font-weight:600}
 .question{font:600 19px/1.35 var(--display);letter-spacing:-.01em;text-wrap:pretty}
 .choices{display:flex;flex-direction:column;gap:10px}
 .choice{all:unset;box-sizing:border-box;display:flex;gap:12px;align-items:flex-start;padding:14px;border:1.5px solid var(--line);border-radius:12px;background:var(--surface);cursor:pointer;font:500 15px/1.4 var(--body);color:var(--ink);transition:border-color .15s,background .15s}
@@ -104,8 +116,9 @@ input:focus{outline:none;border-color:var(--accent)}
 .tag{font-size:12px;font-weight:600} .tag.ok{color:var(--ok)} .tag.bad{color:var(--bad)}
 .notice{padding:14px;border-radius:12px;background:var(--surface);border:1px dashed var(--line);font-size:14px;color:var(--muted)}
 nav{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--line);padding:8px 16px calc(8px + env(safe-area-inset-bottom,0px));display:flex;justify-content:center}
-nav .tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;width:100%;max-width:520px}
-nav button{all:unset;cursor:pointer;text-align:center;padding:9px 4px;border-radius:10px;font:600 13px var(--body);color:var(--muted)}
+nav .tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;width:100%;max-width:520px}
+nav button{all:unset;cursor:pointer;text-align:center;padding:9px 2px;border-radius:10px;font:600 12px var(--body);color:var(--muted);position:relative}
+nav button .dot{position:absolute;top:6px;right:calc(50% - 16px);width:8px;height:8px;border-radius:50%;background:var(--bad)}
 nav button[aria-selected=true]{background:var(--accent-soft);color:var(--accent)}
 nav svg{display:block;margin:0 auto 3px;width:20px;height:20px}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
@@ -122,13 +135,14 @@ nav svg{display:block;margin:0 auto 3px;width:20px;height:20px}
 <nav id="nav" hidden><div class="tabs" role="tablist">
   <button role="tab" data-tab="quiz" aria-selected="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6V14"/><circle cx="12" cy="17.5" r=".6" fill="currentColor"/></svg>Cette semaine</button>
   <button role="tab" data-tab="board" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20V12h4v8M10 20V6h4v14M16 20v-5h4v5"/></svg>Classement</button>
+  <button role="tab" data-tab="forum" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/><path d="M9.5 10a2.5 2.5 0 1 1 3 2.4c-.5.2-.5.6-.5 1.1"/><circle cx="12" cy="16" r=".5" fill="currentColor"/></svg>Questions</button>
   <button role="tab" data-tab="archive" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 9h8M8 13h8M8 17h5"/></svg>Archives</button>
 </div></nav>
 
 <script>
 const L=["A","B","C","D"];
 const $view=document.getElementById("view"), $who=document.getElementById("who"), $nav=document.getElementById("nav");
-const S={prizes:null,auth:null,tab:"quiz",week:null,nextStart:null,mine:[],qIndex:null,busy:false,board:null,archives:null,review:null,error:null};
+const S={forum:null,forumSeen:0,prizes:null,auth:null,tab:"quiz",week:null,nextStart:null,mine:[],qIndex:null,busy:false,board:null,archives:null,review:null,error:null};
 
 /* ---------- Accès à la base (fonctions Supabase) ---------- */
 async function rpc(fn,args={}){
@@ -151,7 +165,7 @@ function saveAuth(a){ try{ a?localStorage.setItem("quiz-auth",JSON.stringify(a))
 /* ---------- Utilitaires ---------- */
 function fmt(iso){ return new Date(iso+"T12:00:00").toLocaleDateString("fr-FR",{day:"numeric",month:"long"}); }
 function el(tag,attrs={},...kids){ const e=document.createElement(tag); for(const [k,v] of Object.entries(attrs)){ if(k==="class") e.className=v; else if(k.startsWith("on")) e.addEventListener(k.slice(2),v); else if(v!==false&&v!=null) e.setAttribute(k,v===true?"":v); } for(const c of kids.flat()){ if(c==null||c===false) continue; e.append(c.nodeType?c:document.createTextNode(String(c))); } return e; }
-function setTab(t){ S.tab=t; S.review=null; document.querySelectorAll("nav button").forEach(b=>b.setAttribute("aria-selected",b.dataset.tab===t)); render(); window.scrollTo(0,0); if(t==="board") loadBoard(); if(t==="archive") loadArchives(); }
+function setTab(t){ S.tab=t; S.review=null; document.querySelectorAll("nav button").forEach(b=>b.setAttribute("aria-selected",b.dataset.tab===t)); render(); window.scrollTo(0,0); if(t==="board") loadBoard(); if(t==="archive") loadArchives(); if(t==="forum") loadForum(); }
 document.querySelectorAll("nav button").forEach(b=>b.addEventListener("click",()=>setTab(b.dataset.tab)));
 
 function render(){
@@ -161,7 +175,8 @@ function render(){
   $nav.hidden=!S.auth;
   if(S.error){ $view.append(el("div",{class:"notice"},S.error),el("button",{class:"btn ghost",onclick:()=>{S.error=null;start();}},"Réessayer")); return; }
   if(!S.auth) return renderLogin();
-  if(S.tab==="quiz") renderQuiz(); else if(S.tab==="board") renderBoard(); else renderArchive();
+  if(S.tab==="quiz") renderQuiz(); else if(S.tab==="board") renderBoard(); else if(S.tab==="forum") renderForum(); else renderArchive();
+  updateDot();
 }
 
 /* ---------- Connexion ---------- */
@@ -212,7 +227,7 @@ function renderQuiz(){
     $view.append(card); return;
   }
   const i=S.qIndex!==null?S.qIndex:mine.length, q=w.questions[i], a=mine[i];
-  card.append(el("div",{class:"qnum"},`Question ${i+1} sur ${n}`),el("div",{class:"question"},q.q));
+  card.append(el("div",{class:"qnum"},el("span",{},`Question ${i+1} sur ${n}`),levelTag(i)),el("div",{class:"question"},q.q));
   card.append(el("div",{class:"choices"},q.choices.map((c,k)=>{
     let cls="choice"; if(a){ if(k===a.answer) cls+=" right"; else if(k===a.choice) cls+=" wrong"; }
     return el("button",{class:cls,disabled:!!a||S.busy,onclick:()=>answer(i,k)},el("span",{class:"k"},L[k]),el("span",{},c));
@@ -283,10 +298,44 @@ function renderArchive(){
       el("button",{onclick:()=>openReview(w.id)},"Corrections"))))));
 }
 
+/* ---------- Niveau de difficulté ---------- */
+const LEVELS=["Facile","Facile","Intermédiaire","Difficile","Expert"];
+function levelTag(i){ return el("span",{class:"level"},LEVELS[i]||"",el("i",{},[0,1,2,3,4].map(k=>el("b",{class:k<=i?"on":""})))); }
+
+/* ---------- Espace questions ---------- */
+function readSeen(){ try{ return +localStorage.getItem("quiz-forum-seen")||0; }catch(e){ return 0; } }
+function writeSeen(n){ try{ localStorage.setItem("quiz-forum-seen",String(n)); }catch(e){} }
+let forumTotal=0;
+async function checkForum(){ try{ forumTotal=await rpc("forum_count"); updateDot(); }catch(e){} }
+function updateDot(){ const b=document.querySelector('nav button[data-tab="forum"]'); if(!b) return; const old=b.querySelector(".dot"); if(old) old.remove(); if(S.tab!=="forum"&&forumTotal>readSeen()) b.append(el("span",{class:"dot","aria-label":"nouvelles réponses"})); }
+async function loadForum(){ try{ S.forum=await rpc("list_questions",cred()); forumTotal=S.forum.filter(f=>f.answer).length; writeSeen(Math.max(forumTotal,readSeen())); }catch(e){ S.forum={error:e.message}; } if(S.tab==="forum") render(); }
+function when(ts){ return new Date(ts).toLocaleDateString("fr-FR",{day:"numeric",month:"long"}); }
+function renderForum(){
+  const box=el("textarea",{id:"ask",maxlength:"800",placeholder:"Ex. Un client peut-il avoir un LEP et un Livret A en même temps ?"});
+  const err=el("p",{class:"error",role:"alert"});
+  const btn=el("button",{class:"btn",type:"submit"},"Envoyer ma question");
+  $view.append(el("form",{class:"card ask",onsubmit:async e=>{ e.preventDefault(); err.textContent="";
+      if(box.value.trim().length<10){ err.textContent="Ta question est trop courte."; return; }
+      btn.disabled=true;
+      try{ await rpc("ask_question",{...cred(),p_body:box.value,p_anonymous:false}); box.value=""; await loadForum(); }
+      catch(x){ err.textContent=x.message; btn.disabled=false; } }},
+    el("h2",{},"Une question ?"),
+    el("p",{class:"muted"},"Sur un placement, un cas client, une notion du quiz… Ta question et sa réponse seront publiées ici, avec ton prénom, pour que tout le monde en profite."),
+    box, err, btn));
+  if(!S.forum){ $view.append(el("div",{class:"notice"},"Chargement des questions…")); return; }
+  if(S.forum.error){ $view.append(el("div",{class:"notice"},S.forum.error)); return; }
+  if(!S.forum.length){ $view.append(el("div",{class:"notice"},"Aucune question pour l'instant. Pose la première !")); return; }
+  $view.append(el("div",{class:"card"},el("h3",{},"Questions et réponses"),el("div",{},S.forum.map(f=>el("div",{class:"thread"},
+    el("div",{class:"meta"},(f.mine?"Toi":(f.author||"Un collègue"))+" · "+when(f.created_at)),
+    el("div",{class:"q"},f.body),
+    f.answer?el("div",{class:"a"},el("b",{},"Réponse"),f.answer):el("div",{class:"pending"},"En attente de réponse"))))));
+}
+
 /* ---------- Démarrage ---------- */
 async function start(){
   if(SUPABASE_URL.includes("VOTRE-PROJET")){ S.error="L'appli n'est pas encore reliée à sa base de données : renseigne SUPABASE_URL et SUPABASE_KEY en haut du fichier."; render(); return; }
   S.auth=loadAuth();
+  checkForum();
   if(S.auth){ try{ await loadWeek(); }catch(e){ if(/Code|Prénom|essais/.test(e.message)){ S.auth=null; saveAuth(null); } else S.error=e.message; } }
   render();
 }

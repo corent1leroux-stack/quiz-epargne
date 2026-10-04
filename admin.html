@@ -51,7 +51,19 @@ p{margin:0}
 .dots{display:flex;gap:6px}
 .dots span{flex:1;height:6px;border-radius:3px;background:var(--line)}
 .dots span.ok{background:var(--ok)} .dots span.bad{background:var(--bad)} .dots span.cur{background:var(--accent)}
-.qnum{font:600 13px var(--body);color:var(--accent);font-variant-numeric:tabular-nums}
+.qnum{font:600 13px var(--body);color:var(--accent);font-variant-numeric:tabular-nums;display:flex;justify-content:space-between;gap:10px;align-items:center}
+.level{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--muted)}
+.level i{display:inline-flex;gap:3px} .level i b{width:6px;height:6px;border-radius:50%;background:var(--line)} .level i b.on{background:var(--gold)}
+.ask textarea{width:100%;min-height:96px;padding:12px 14px;border-radius:12px;border:1.5px solid var(--line);background:var(--bg);color:var(--ink);font:500 15px/1.45 var(--body);resize:vertical}
+.ask textarea:focus{outline:none;border-color:var(--accent)}
+.check{display:flex;gap:8px;align-items:center;font-size:14px;color:var(--muted)} .check input{width:auto}
+.thread{display:flex;flex-direction:column;gap:10px;padding:16px 0;border-bottom:1px solid var(--line)}
+.thread:last-child{border-bottom:0}
+.thread .meta{font-size:12px;color:var(--muted)}
+.thread .q{font-weight:600}
+.thread .a{background:var(--accent-soft);border-radius:12px;padding:12px 14px;font-size:14px;white-space:pre-line}
+.thread .a b{display:block;font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--accent);margin-bottom:2px}
+.thread .pending{font-size:13px;color:var(--gold);font-weight:600}
 .question{font:600 19px/1.35 var(--display);letter-spacing:-.01em;text-wrap:pretty}
 .choices{display:flex;flex-direction:column;gap:10px}
 .choice{all:unset;box-sizing:border-box;display:flex;gap:12px;align-items:flex-start;padding:14px;border:1.5px solid var(--line);border-radius:12px;background:var(--surface);cursor:pointer;font:500 15px/1.4 var(--body);color:var(--ink);transition:border-color .15s,background .15s}
@@ -104,8 +116,9 @@ input:focus{outline:none;border-color:var(--accent)}
 .tag{font-size:12px;font-weight:600} .tag.ok{color:var(--ok)} .tag.bad{color:var(--bad)}
 .notice{padding:14px;border-radius:12px;background:var(--surface);border:1px dashed var(--line);font-size:14px;color:var(--muted)}
 nav{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--line);padding:8px 16px calc(8px + env(safe-area-inset-bottom,0px));display:flex;justify-content:center}
-nav .tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;width:100%;max-width:520px}
-nav button{all:unset;cursor:pointer;text-align:center;padding:9px 4px;border-radius:10px;font:600 13px var(--body);color:var(--muted)}
+nav .tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;width:100%;max-width:520px}
+nav button{all:unset;cursor:pointer;text-align:center;padding:9px 2px;border-radius:10px;font:600 12px var(--body);color:var(--muted);position:relative}
+nav button .dot{position:absolute;top:6px;right:calc(50% - 16px);width:8px;height:8px;border-radius:50%;background:var(--bad)}
 nav button[aria-selected=true]{background:var(--accent-soft);color:var(--accent)}
 nav svg{display:block;margin:0 auto 3px;width:20px;height:20px}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
@@ -147,6 +160,13 @@ textarea:focus,select:focus{outline:none;border-color:var(--accent)}
 .radio{display:flex;align-items:center;gap:8px}
 .radio input{width:auto}
 .ok-msg{color:var(--ok);font-size:14px;font-weight:600}
+nav button{position:relative;font-size:11px!important}
+nav button .count{position:absolute;top:3px;right:calc(50% - 22px);min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:var(--bad);color:#fff;font:700 11px/18px var(--body);text-align:center}
+.thread{display:flex;flex-direction:column;gap:10px;padding:16px 0;border-bottom:1px solid var(--line)}
+.thread:last-child{border-bottom:0}
+.thread .meta{font-size:12px;color:var(--muted);display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.thread .q{font-weight:600}
+.thread .a{background:var(--accent-soft);border-radius:12px;padding:12px 14px;font-size:14px;white-space:pre-line}
 </style>
 
 <div class="app">
@@ -156,8 +176,9 @@ textarea:focus,select:focus{outline:none;border-color:var(--accent)}
   </header>
   <main id="view"><div class="notice">Chargement…</div></main>
 </div>
-<nav id="nav" hidden><div class="tabs" role="tablist" style="grid-template-columns:repeat(4,1fr)">
+<nav id="nav" hidden><div class="tabs" role="tablist" style="grid-template-columns:repeat(5,1fr);gap:2px">
   <button role="tab" data-tab="suivi" aria-selected="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20V12h4v8M10 20V6h4v14M16 20v-5h4v5"/></svg>Suivi</button>
+  <button role="tab" data-tab="forum" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg>Questions</button>
   <button role="tab" data-tab="joueurs" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.6 3.4-5.5 6.5-5.5s5.7 1.9 6.5 5.5M16 4.5a3.5 3.5 0 0 1 0 7M18 14.8c1.8.8 3 2.5 3.5 5.2"/></svg>Joueurs</button>
   <button role="tab" data-tab="lots" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="8" width="18" height="13" rx="2"/><path d="M12 8v13M3 12h18M12 8c-1.5-3-5-4-5-1.5S10 8 12 8zm0 0c1.5-3 5-4 5-1.5S14 8 12 8z"/></svg>Lots</button>
   <button role="tab" data-tab="reglages" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-2.9 1.2V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-2.9-1.2l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.7 1.7 0 0 0 3 14.1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.2-2.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 2.9-1.2V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 2.9 1.2l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0 1.2 2.9h.1a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>Réglages</button>
@@ -166,7 +187,7 @@ textarea:focus,select:focus{outline:none;border-color:var(--accent)}
 <script>
 const L=["A","B","C","D"];
 const $view=document.getElementById("view"), $who=document.getElementById("who"), $nav=document.getElementById("nav");
-const S={pass:null,configured:null,data:null,tab:"suivi",week:null,edit:null,player:null,flash:null,error:null};
+const S={forum:null,answering:null,confirmDel:null,pass:null,configured:null,data:null,tab:"suivi",week:null,edit:null,player:null,flash:null,error:null};
 
 async function rpc(fn,args={}){
   const h={"Content-Type":"application/json",apikey:SUPABASE_KEY};
@@ -186,10 +207,10 @@ function pct(a,b){ return b?Math.round(100*a/b):null; }
 function savePass(p){ try{ p?sessionStorage.setItem("quiz-admin",p):sessionStorage.removeItem("quiz-admin"); }catch(e){} }
 function loadPass(){ try{ return sessionStorage.getItem("quiz-admin"); }catch(e){ return null; } }
 
-function setTab(t){ S.tab=t; S.edit=null; S.player=null; S.flash=null; document.querySelectorAll("nav button").forEach(b=>b.setAttribute("aria-selected",b.dataset.tab===t)); render(); window.scrollTo(0,0); }
+function setTab(t){ S.tab=t; S.edit=null; S.player=null; S.flash=null; S.answering=null; S.confirmDel=null; document.querySelectorAll("nav button").forEach(b=>b.setAttribute("aria-selected",b.dataset.tab===t)); render(); window.scrollTo(0,0); }
 document.querySelectorAll("nav button").forEach(b=>b.addEventListener("click",()=>setTab(b.dataset.tab)));
 
-async function refresh(){ S.data=await rpc("admin_overview",{p_pass:S.pass}); if(!S.week||!S.data.weeks.find(w=>w.id===S.week)) S.week=currentWeekId(); }
+async function refresh(){ S.forum=await rpc("admin_questions",{p_pass:S.pass}); S.data=await rpc("admin_overview",{p_pass:S.pass}); if(!S.week||!S.data.weeks.find(w=>w.id===S.week)) S.week=currentWeekId(); }
 function currentWeekId(){ const t=S.data.today, ws=S.data.weeks; const cur=ws.filter(w=>w.start<=t&&t<=w.end).pop(); if(cur) return cur.id; const past=ws.filter(w=>w.start<=t).pop(); return (past||ws[0]||{}).id; }
 
 function render(){
@@ -200,7 +221,8 @@ function render(){
   if(!S.data) return renderLogin();
   $who.append(el("button",{onclick:logout},"Se déconnecter"));
   if(S.flash) $view.append(el("p",{class:"ok-msg",role:"status"},S.flash));
-  ({suivi:renderSuivi,joueurs:renderPlayers,lots:renderPrizes,reglages:renderSettings})[S.tab]();
+  ({suivi:renderSuivi,forum:renderForum,joueurs:renderPlayers,lots:renderPrizes,reglages:renderSettings})[S.tab]();
+  updateCount();
 }
 
 /* ---------- Connexion / création du mot de passe ---------- */
@@ -281,6 +303,43 @@ function renderEdit(w){
     el("div",{class:"field"},el("label",{for:"q-exp"},"Explication"),explain),
     el("div",{class:"field"},el("label",{for:"q-tip"},"À retenir (facultatif)"),tip),
     err,btn));
+}
+
+/* ---------- Questions des joueurs ---------- */
+function updateCount(){ const b=document.querySelector('nav button[data-tab="forum"]'); if(!b) return; const old=b.querySelector(".count"); if(old) old.remove();
+  const n=(S.forum||[]).filter(f=>!f.answer).length; if(n) b.append(el("span",{class:"count"},n)); }
+function when(ts){ return new Date(ts).toLocaleDateString("fr-FR",{day:"numeric",month:"long"}); }
+function renderForum(){
+  const list=S.forum||[], pending=list.filter(f=>!f.answer);
+  const card=el("div",{class:"card"},el("h2",{},"Questions des joueurs"),
+    el("p",{class:"muted"},pending.length?`${pending.length} question${pending.length>1?"s":""} en attente de réponse.`:"Toutes les questions ont une réponse."),
+    el("p",{class:"muted",style:"font-size:13px"},"Les questions n'apparaissent aux joueurs qu'une fois que tu y as répondu. Toi seul vois le prénom des questions posées anonymement."));
+  if(!list.length) card.append(el("div",{class:"notice"},"Aucune question pour l'instant."));
+  list.forEach(f=>{
+    const t=el("div",{class:"thread"},
+      el("div",{class:"meta"},el("strong",{},f.author||"Joueur supprimé"),f.anonymous?el("span",{class:"badge"},"anonyme pour les autres"):null,when(f.created_at),
+        f.hidden?el("span",{class:"badge warn"},"masquée"):null, !f.answer?el("span",{class:"badge live"},"à répondre"):null),
+      el("div",{class:"q"},f.body));
+    if(S.answering===f.id||!f.answer){
+      const box=el("textarea",{id:"ans-"+f.id,value:f.answer||"",placeholder:"Ta réponse, visible par tous les joueurs"}), err=el("p",{class:"error"});
+      const save=el("button",{class:"btn small",onclick:async()=>{ err.textContent=""; save.disabled=true;
+        try{ await rpc("admin_answer",{p_pass:S.pass,p_id:f.id,p_answer:box.value}); await refresh(); S.answering=null; S.flash="Réponse publiée."; render(); }
+        catch(x){ err.textContent=x.message; save.disabled=false; } }},f.answer?"Enregistrer":"Publier la réponse");
+      t.append(box,el("div",{class:"actions"},save,f.answer?el("button",{class:"link",onclick:()=>{S.answering=null;render();}},"Annuler"):null),err);
+    } else {
+      t.append(el("div",{class:"a"},f.answer));
+    }
+    const acts=el("div",{class:"actions"});
+    if(f.answer&&S.answering!==f.id) acts.append(el("button",{class:"link",onclick:()=>{S.answering=f.id;S.flash=null;render();}},"Modifier la réponse"));
+    if(f.answer) acts.append(el("button",{class:"link",onclick:async()=>{ await rpc("admin_hide_question",{p_pass:S.pass,p_id:f.id,p_hidden:!f.hidden}); await refresh(); S.flash=f.hidden?"Question de nouveau visible.":"Question masquée aux joueurs."; render(); }},f.hidden?"Afficher":"Masquer"));
+    acts.append(el("button",{class:"link danger",onclick:()=>{S.confirmDel=f.id;render();}},"Supprimer"));
+    t.append(acts);
+    if(S.confirmDel===f.id) t.append(el("div",{class:"inline"},el("p",{style:"width:100%"},"Supprimer définitivement cette question ?"),
+      el("button",{class:"btn small danger",onclick:async()=>{ await rpc("admin_delete_question",{p_pass:S.pass,p_id:f.id}); await refresh(); S.confirmDel=null; S.flash="Question supprimée."; render(); }},"Supprimer"),
+      el("button",{class:"link",onclick:()=>{S.confirmDel=null;render();}},"Annuler")));
+    card.append(t);
+  });
+  $view.append(card);
 }
 
 /* ---------- Joueurs ---------- */
