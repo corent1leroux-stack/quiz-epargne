@@ -22,7 +22,7 @@ const SUPABASE_KEY = "sb_publishable_4TEnAMm1Uu_MON6riVHtiw_tHZ1xA2v";
 :root{
   --bg:#EEF2EF; --surface:#FFFFFF; --ink:#13241D; --muted:#5A6B63; --line:#D7E0DA;
   --accent:#0B6E55; --accent-ink:#FFFFFF; --accent-soft:#DDEFE8;
-  --gold:#B7790C; --ok:#1F8A4C; --ok-soft:#E1F3E8; --bad:#C2412D; --bad-soft:#FBE7E3;
+  --gold:#B7790C; --bronze:#A8693B; --silver:#7D8C93; --ok:#1F8A4C; --ok-soft:#E1F3E8; --bad:#C2412D; --bad-soft:#FBE7E3;
   --display:"Bricolage Grotesque",ui-rounded,system-ui,sans-serif;
   --body:"Instrument Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
   color-scheme:light;
@@ -30,7 +30,7 @@ const SUPABASE_KEY = "sb_publishable_4TEnAMm1Uu_MON6riVHtiw_tHZ1xA2v";
 @media (prefers-color-scheme:dark){:root{
   --bg:#0E1613; --surface:#16211D; --ink:#E4EDE8; --muted:#90A39A; --line:#26352F;
   --accent:#3FC79F; --accent-ink:#082019; --accent-soft:#173A30;
-  --gold:#E3AE4A; --ok:#4FCB83; --ok-soft:#163323; --bad:#F07A66; --bad-soft:#3A1E19; color-scheme:dark}}
+  --gold:#C99A3A; --bronze:#A0673F; --silver:#6F8089; --ok:#4FCB83; --ok-soft:#163323; --bad:#F07A66; --bad-soft:#3A1E19; color-scheme:dark}}
 *{box-sizing:border-box}
 [hidden]{display:none!important}
 html,body{background:var(--bg);margin:0}
@@ -63,6 +63,22 @@ p{margin:0}
 .thread .q{font-weight:600}
 .thread .a{background:var(--accent-soft);border-radius:12px;padding:12px 14px;font-size:14px;white-space:pre-line}
 .thread .a b{display:block;font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--accent);margin-bottom:2px}
+.badges{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.bdg{display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center;padding:12px 6px;border-radius:14px;background:var(--bg);min-width:0;cursor:pointer;border:0;font:inherit;color:inherit}
+.bdg:focus-visible{outline:2px solid var(--accent)}
+.bdg .medal{width:54px;height:54px;border-radius:50%;display:grid;place-items:center;color:#fff}
+.bdg .medal svg{width:26px;height:26px}
+.bdg.t1 .medal{background:var(--bronze)} .bdg.t2 .medal{background:var(--silver)} .bdg.t3 .medal{background:var(--gold)}
+.bdg.locked .medal{background:var(--line);color:var(--muted)}
+.bdg .nm{font-size:12px;font-weight:600;line-height:1.25}
+.bdg .pg{width:80%;height:4px;border-radius:2px;background:var(--line);overflow:hidden}
+.bdg .pg i{display:block;height:100%;background:var(--accent)}
+.bdg-detail{background:var(--accent-soft);border-radius:12px;padding:12px 14px;font-size:14px}
+.toast{position:fixed;left:16px;right:16px;bottom:calc(84px + env(safe-area-inset-bottom,0px));max-width:488px;margin:0 auto;background:var(--ink);color:var(--bg);border-radius:14px;padding:12px 14px;display:flex;gap:12px;align-items:center;box-shadow:0 8px 24px rgba(0,0,0,.25);z-index:10;animation:pop .35s ease-out}
+.toast .medal{flex:none;width:40px;height:40px;border-radius:50%;display:grid;place-items:center;background:var(--gold);color:#fff}
+.toast .medal svg{width:20px;height:20px}
+.toast b{display:block;font-size:12px;text-transform:uppercase;letter-spacing:.08em;opacity:.75}
+@keyframes pop{from{transform:translateY(12px);opacity:0}to{transform:none;opacity:1}}
 .thread .pending{font-size:13px;color:var(--gold);font-weight:600}
 .question{font:600 19px/1.35 var(--display);letter-spacing:-.01em;text-wrap:pretty}
 .choices{display:flex;flex-direction:column;gap:10px}
@@ -160,6 +176,7 @@ textarea:focus,select:focus{outline:none;border-color:var(--accent)}
 .radio{display:flex;align-items:center;gap:8px}
 .radio input{width:auto}
 .ok-msg{color:var(--ok);font-size:14px;font-weight:600}
+.back{display:inline-block;margin-top:8px;font:600 13px var(--body);color:var(--accent);text-decoration:none}
 nav button{position:relative;font-size:11px!important}
 nav button .count{position:absolute;top:3px;right:calc(50% - 22px);min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:var(--bad);color:#fff;font:700 11px/18px var(--body);text-align:center}
 .thread{display:flex;flex-direction:column;gap:10px;padding:16px 0;border-bottom:1px solid var(--line)}
@@ -171,7 +188,7 @@ nav button .count{position:absolute;top:3px;right:calc(50% - 22px);min-width:18p
 
 <div class="app">
   <header>
-    <div class="brand">Quiz Épargne<small>Mode administrateur</small></div>
+    <div class="brand">Quiz Épargne<small>Mode administrateur</small><a href="./" class="back">← Retour au quiz</a></div>
     <div class="who" id="who"></div>
   </header>
   <main id="view"><div class="notice">Chargement…</div></main>
@@ -204,8 +221,8 @@ function el(tag,attrs={},...kids){ const e=document.createElement(tag); for(cons
 function fmt(iso){ return new Date(iso+(iso.length===10?"T12:00:00":"")).toLocaleDateString("fr-FR",{day:"numeric",month:"short"}); }
 function ago(ts){ if(!ts) return "jamais joué"; const d=Math.floor((Date.now()-new Date(ts))/864e5); return d<=0?"actif aujourd'hui":d===1?"actif hier":`actif il y a ${d} jours`; }
 function pct(a,b){ return b?Math.round(100*a/b):null; }
-function savePass(p){ try{ p?sessionStorage.setItem("quiz-admin",p):sessionStorage.removeItem("quiz-admin"); }catch(e){} }
-function loadPass(){ try{ return sessionStorage.getItem("quiz-admin"); }catch(e){ return null; } }
+function savePass(p){ try{ if(p){ localStorage.setItem("quiz-admin",p); localStorage.setItem("quiz-admin-device","1"); } else { localStorage.removeItem("quiz-admin"); localStorage.removeItem("quiz-admin-device"); } }catch(e){} }
+function loadPass(){ try{ return localStorage.getItem("quiz-admin"); }catch(e){ return null; } }
 
 function setTab(t){ S.tab=t; S.edit=null; S.player=null; S.flash=null; S.answering=null; S.confirmDel=null; document.querySelectorAll("nav button").forEach(b=>b.setAttribute("aria-selected",b.dataset.tab===t)); render(); window.scrollTo(0,0); }
 document.querySelectorAll("nav button").forEach(b=>b.addEventListener("click",()=>setTab(b.dataset.tab)));
@@ -219,7 +236,7 @@ function render(){
   if(S.error){ $view.append(el("div",{class:"notice"},S.error)); return; }
   if(S.configured===null){ $view.append(el("div",{class:"notice"},"Chargement…")); return; }
   if(!S.data) return renderLogin();
-  $who.append(el("button",{onclick:logout},"Se déconnecter"));
+  $who.append(el("button",{onclick:logout},"Quitter le mode admin"));
   if(S.flash) $view.append(el("p",{class:"ok-msg",role:"status"},S.flash));
   ({suivi:renderSuivi,forum:renderForum,joueurs:renderPlayers,lots:renderPrizes,reglages:renderSettings})[S.tab]();
   updateCount();
@@ -403,7 +420,7 @@ function renderSettings(){
 (async()=>{
   try{ S.configured=(await rpc("admin_status")).configured; }catch(e){ S.error=e.message; render(); return; }
   const p=loadPass();
-  if(p&&S.configured){ try{ S.pass=p; await refresh(); }catch(e){ S.pass=null; savePass(null); } }
+  if(p&&S.configured){ try{ S.pass=p; await refresh(); savePass(p); }catch(e){ S.pass=null; savePass(null); } }
   render();
 })();
 </script>

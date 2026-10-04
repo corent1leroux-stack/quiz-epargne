@@ -22,7 +22,7 @@ const SUPABASE_KEY = "sb_publishable_4TEnAMm1Uu_MON6riVHtiw_tHZ1xA2v";
 :root{
   --bg:#EEF2EF; --surface:#FFFFFF; --ink:#13241D; --muted:#5A6B63; --line:#D7E0DA;
   --accent:#0B6E55; --accent-ink:#FFFFFF; --accent-soft:#DDEFE8;
-  --gold:#B7790C; --ok:#1F8A4C; --ok-soft:#E1F3E8; --bad:#C2412D; --bad-soft:#FBE7E3;
+  --gold:#B7790C; --bronze:#A8693B; --silver:#7D8C93; --ok:#1F8A4C; --ok-soft:#E1F3E8; --bad:#C2412D; --bad-soft:#FBE7E3;
   --display:"Bricolage Grotesque",ui-rounded,system-ui,sans-serif;
   --body:"Instrument Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
   color-scheme:light;
@@ -30,7 +30,7 @@ const SUPABASE_KEY = "sb_publishable_4TEnAMm1Uu_MON6riVHtiw_tHZ1xA2v";
 @media (prefers-color-scheme:dark){:root{
   --bg:#0E1613; --surface:#16211D; --ink:#E4EDE8; --muted:#90A39A; --line:#26352F;
   --accent:#3FC79F; --accent-ink:#082019; --accent-soft:#173A30;
-  --gold:#E3AE4A; --ok:#4FCB83; --ok-soft:#163323; --bad:#F07A66; --bad-soft:#3A1E19; color-scheme:dark}}
+  --gold:#C99A3A; --bronze:#A0673F; --silver:#6F8089; --ok:#4FCB83; --ok-soft:#163323; --bad:#F07A66; --bad-soft:#3A1E19; color-scheme:dark}}
 *{box-sizing:border-box}
 [hidden]{display:none!important}
 html,body{background:var(--bg);margin:0}
@@ -63,6 +63,22 @@ p{margin:0}
 .thread .q{font-weight:600}
 .thread .a{background:var(--accent-soft);border-radius:12px;padding:12px 14px;font-size:14px;white-space:pre-line}
 .thread .a b{display:block;font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--accent);margin-bottom:2px}
+.badges{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.bdg{display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center;padding:12px 6px;border-radius:14px;background:var(--bg);min-width:0;cursor:pointer;border:0;font:inherit;color:inherit}
+.bdg:focus-visible{outline:2px solid var(--accent)}
+.bdg .medal{width:54px;height:54px;border-radius:50%;display:grid;place-items:center;color:#fff}
+.bdg .medal svg{width:26px;height:26px}
+.bdg.t1 .medal{background:var(--bronze)} .bdg.t2 .medal{background:var(--silver)} .bdg.t3 .medal{background:var(--gold)}
+.bdg.locked .medal{background:var(--line);color:var(--muted)}
+.bdg .nm{font-size:12px;font-weight:600;line-height:1.25}
+.bdg .pg{width:80%;height:4px;border-radius:2px;background:var(--line);overflow:hidden}
+.bdg .pg i{display:block;height:100%;background:var(--accent)}
+.bdg-detail{background:var(--accent-soft);border-radius:12px;padding:12px 14px;font-size:14px}
+.toast{position:fixed;left:16px;right:16px;bottom:calc(84px + env(safe-area-inset-bottom,0px));max-width:488px;margin:0 auto;background:var(--ink);color:var(--bg);border-radius:14px;padding:12px 14px;display:flex;gap:12px;align-items:center;box-shadow:0 8px 24px rgba(0,0,0,.25);z-index:10;animation:pop .35s ease-out}
+.toast .medal{flex:none;width:40px;height:40px;border-radius:50%;display:grid;place-items:center;background:var(--gold);color:#fff}
+.toast .medal svg{width:20px;height:20px}
+.toast b{display:block;font-size:12px;text-transform:uppercase;letter-spacing:.08em;opacity:.75}
+@keyframes pop{from{transform:translateY(12px);opacity:0}to{transform:none;opacity:1}}
 .thread .pending{font-size:13px;color:var(--gold);font-weight:600}
 .question{font:600 19px/1.35 var(--display);letter-spacing:-.01em;text-wrap:pretty}
 .choices{display:flex;flex-direction:column;gap:10px}
@@ -136,13 +152,13 @@ nav svg{display:block;margin:0 auto 3px;width:20px;height:20px}
   <button role="tab" data-tab="quiz" aria-selected="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6V14"/><circle cx="12" cy="17.5" r=".6" fill="currentColor"/></svg>Cette semaine</button>
   <button role="tab" data-tab="board" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20V12h4v8M10 20V6h4v14M16 20v-5h4v5"/></svg>Classement</button>
   <button role="tab" data-tab="forum" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/><path d="M9.5 10a2.5 2.5 0 1 1 3 2.4c-.5.2-.5.6-.5 1.1"/><circle cx="12" cy="16" r=".5" fill="currentColor"/></svg>Questions</button>
-  <button role="tab" data-tab="archive" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 9h8M8 13h8M8 17h5"/></svg>Archives</button>
+  <button role="tab" data-tab="archive" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="9" r="6"/><path d="M8.5 14 7 22l5-3 5 3-1.5-8"/></svg>Parcours</button>
 </div></nav>
 
 <script>
 const L=["A","B","C","D"];
 const $view=document.getElementById("view"), $who=document.getElementById("who"), $nav=document.getElementById("nav");
-const S={forum:null,forumSeen:0,prizes:null,auth:null,tab:"quiz",week:null,nextStart:null,mine:[],qIndex:null,busy:false,board:null,archives:null,review:null,error:null};
+const S={badges:null,badgeOpen:null,forum:null,forumSeen:0,prizes:null,auth:null,tab:"quiz",week:null,nextStart:null,mine:[],qIndex:null,busy:false,board:null,archives:null,review:null,error:null};
 
 /* ---------- Accès à la base (fonctions Supabase) ---------- */
 async function rpc(fn,args={}){
@@ -168,6 +184,20 @@ function el(tag,attrs={},...kids){ const e=document.createElement(tag); for(cons
 function setTab(t){ S.tab=t; S.review=null; document.querySelectorAll("nav button").forEach(b=>b.setAttribute("aria-selected",b.dataset.tab===t)); render(); window.scrollTo(0,0); if(t==="board") loadBoard(); if(t==="archive") loadArchives(); if(t==="forum") loadForum(); }
 document.querySelectorAll("nav button").forEach(b=>b.addEventListener("click",()=>setTab(b.dataset.tab)));
 
+/* ---------- Accès organisateur ----------
+   L'onglet Admin n'apparaît que sur l'appareil où le mot de passe administrateur a été saisi.
+   Pour y accéder la première fois : toucher 5 fois de suite le titre « Quiz Épargne ». */
+(function(){
+  let admin=false; try{ admin=localStorage.getItem("quiz-admin-device")==="1"; }catch(e){}
+  if(admin){
+    document.querySelector("nav .tabs").style.gridTemplateColumns="repeat(5,1fr)";
+    document.querySelector("nav .tabs").append(el("button",{role:"tab","aria-selected":"false",onclick:()=>{ location.href="admin.html"; }},
+      (()=>{ const t=document.createElement("template"); t.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l7 3v5c0 4.5-3 8.3-7 10-4-1.7-7-5.5-7-10V6l7-3z"/><path d="M9 12l2 2 4-4"/></svg>'; return t.content.firstChild; })(),"Admin"));
+  }
+  let taps=0, timer=null;
+  document.querySelector(".brand").addEventListener("click",()=>{ taps++; clearTimeout(timer); timer=setTimeout(()=>taps=0,2500); if(taps>=5){ location.href="admin.html"; } });
+})();
+
 function render(){
   $view.replaceChildren();
   $who.replaceChildren();
@@ -191,7 +221,7 @@ function renderLogin(){
     if(p.length<2){ err.textContent="Indique ton prénom."; return; }
     if(!/^\d{4}$/.test(c)){ err.textContent="Le code doit contenir 4 chiffres."; return; }
     btn.disabled=true; btn.textContent="Connexion…";
-    try{ const r=await rpc("join_quiz",{p_pseudo:p,p_pin:c}); S.auth={pseudo:r.pseudo,pin:c}; saveAuth(S.auth); await loadWeek(); render(); }
+    try{ const r=await rpc("join_quiz",{p_pseudo:p,p_pin:c}); S.auth={pseudo:r.pseudo,pin:c}; saveAuth(S.auth); await loadWeek(); loadBadges(); render(); }
     catch(x){ err.textContent=x.message; btn.disabled=false; btn.textContent="Entrer"; }
   }},
     el("h2",{},"Bienvenue dans le quiz"),
@@ -202,7 +232,7 @@ function renderLogin(){
     err,btn);
   $view.append(form);
 }
-function logout(){ S.auth=null; saveAuth(null); S.mine=[]; S.qIndex=null; S.tab="quiz"; render(); }
+function logout(){ S.badges=null; S.auth=null; saveAuth(null); S.mine=[]; S.qIndex=null; S.tab="quiz"; render(); }
 
 /* ---------- Semaine en cours ---------- */
 async function loadWeek(){
@@ -242,7 +272,7 @@ function renderQuiz(){
 }
 async function answer(i,k){
   if(S.busy) return; S.busy=true; render();
-  try{ const r=await rpc("submit_answer",{...cred(),p_week:S.week.id,p_q:i,p_choice:k}); S.mine[i]=r; S.qIndex=i; }
+  try{ const r=await rpc("submit_answer",{...cred(),p_week:S.week.id,p_q:i,p_choice:k}); S.mine[i]=r; S.qIndex=i; loadBadges().then(()=>{}); }
   catch(e){ alert(e.message); }
   S.busy=false; render();
 }
@@ -260,7 +290,7 @@ function renderBoard(){
       el("div",{class:"podium"},order.map((r,j)=>r?el("div",{class:"step s"+[2,1,3][j]},el("div",{class:"nm"},r.pseudo),el("div",{class:"block"},r.points)):el("div")))),
     el("div",{class:"card"},el("ol",{class:"board"},rows.map(r=>el("li",{class:"row"+(r.rank===1?" p1":"")+(r.pseudo.toLowerCase()===me?" mine":"")},
       el("div",{class:"rank"},r.rank),
-      el("div",{style:"min-width:0"},el("div",{class:"name"},r.pseudo),el("div",{class:"sub"},`${r.weeks_played} semaine${r.weeks_played>1?"s jouées":" jouée"}`+(r.perfect?` · ${r.perfect} sans-faute`:""))),
+      el("div",{style:"min-width:0"},el("div",{class:"name"},r.pseudo),el("div",{class:"sub"},`${r.weeks_played} semaine${r.weeks_played>1?"s jouées":" jouée"}`+(r.perfect?` · ${r.perfect} sans-faute`:"")+(r.badges?` · ${r.badges} badge${r.badges>1?"s":""}`:""))),
       el("div",{class:"pts"},r.points,el("small",{},"pts")))))));
   renderPrizes();
 }
@@ -273,7 +303,7 @@ function renderPrizes(){
 }
 
 /* ---------- Archives et corrections ---------- */
-async function loadArchives(){ try{ S.archives=await rpc("archives",cred()); }catch(e){ S.archives={error:e.message}; } if(S.tab==="archive") render(); }
+async function loadArchives(){ try{ await loadBadges(); S.archives=await rpc("archives",cred()); }catch(e){ S.archives={error:e.message}; } if(S.tab==="archive") render(); }
 async function openReview(id){ S.review={loading:true}; render(); try{ S.review=await rpc("corrections",{...cred(),p_week:id}); }catch(e){ S.review={error:e.message}; } render(); }
 function renderArchive(){
   if(S.review){
@@ -289,10 +319,11 @@ function renderArchive(){
         it.tip?el("div",{class:"tip"},el("b",{},"À retenir"),it.tip):null)); });
     $view.append(card); return;
   }
+  renderBadges();
   if(!S.archives){ $view.append(el("div",{class:"notice"},"Chargement des archives…")); return; }
   if(S.archives.error){ $view.append(el("div",{class:"notice"},S.archives.error)); return; }
   if(!S.archives.length){ $view.append(el("div",{class:"notice"},"Aucune semaine pour l'instant.")); return; }
-  $view.append(el("div",{class:"card"},el("h2",{},"Archives"),el("div",{},S.archives.map(w=>
+  $view.append(el("div",{class:"card"},el("h2",{},"Mes séries"),el("div",{},S.archives.map(w=>
     el("div",{class:"archive"},el("div",{style:"min-width:0"},el("strong",{},`${w.label} · ${w.theme}`),
       el("div",{class:"muted",style:"font-size:13px"},w.answered?`Ton score : ${w.score} / ${w.total}`:"Pas joué")),
       el("button",{onclick:()=>openReview(w.id)},"Corrections"))))));
@@ -317,7 +348,7 @@ function renderForum(){
   $view.append(el("form",{class:"card ask",onsubmit:async e=>{ e.preventDefault(); err.textContent="";
       if(box.value.trim().length<10){ err.textContent="Ta question est trop courte."; return; }
       btn.disabled=true;
-      try{ await rpc("ask_question",{...cred(),p_body:box.value,p_anonymous:false}); box.value=""; await loadForum(); }
+      try{ await rpc("ask_question",{...cred(),p_body:box.value,p_anonymous:false}); box.value=""; await loadForum(); loadBadges(); }
       catch(x){ err.textContent=x.message; btn.disabled=false; } }},
     el("h2",{},"Une question ?"),
     el("p",{class:"muted"},"Sur un placement, un cas client, une notion du quiz… Ta question et sa réponse seront publiées ici, avec ton prénom, pour que tout le monde en profite."),
@@ -331,12 +362,48 @@ function renderForum(){
     f.answer?el("div",{class:"a"},el("b",{},"Réponse"),f.answer):el("div",{class:"pending"},"En attente de réponse"))))));
 }
 
+/* ---------- Badges ---------- */
+const ICONS={
+ coin:'<circle cx="12" cy="12" r="8"/><path d="M14.5 9.2A3.5 3.5 0 1 0 14.5 14.8M8 11h5M8 13h5"/>',
+ sprout:'<path d="M12 21v-9M12 12c0-4 3-6 7-6 0 4-3 6-7 6zM12 14c0-3-2.5-5-6-5 0 3 2.5 5 6 5z"/>',
+ calendar:'<rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4M9 15l2 2 4-4"/>',
+ pie:'<path d="M12 3v9h9A9 9 0 1 1 12 3z"/><path d="M15 3.5A9 9 0 0 1 20.5 9H15z"/>',
+ star:'<path d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/>',
+ trophy:'<path d="M8 4h8v5a4 4 0 0 1-8 0zM8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4M12 13v4M8 21h8M9 17h6"/>',
+ flame:'<path d="M12 21c-4 0-6-2.7-6-6 0-4 3-6 4-9 1 2 2 3 3 3 0-2 1-4 2-5 1 3 3 5 3 9 0 4.5-2.5 8-6 8z"/>',
+ chart:'<path d="M4 20h16M6 16l4-5 3 3 5-7"/><path d="M15 7h3v3"/>',
+ clock:'<circle cx="12" cy="12" r="8.5"/><path d="M12 7v5l3 2"/>',
+ brain:'<path d="M9 4a3 3 0 0 0-3 3 3 3 0 0 0-2 5 3 3 0 0 0 2 5 3 3 0 0 0 6 1V5a2 2 0 0 0-3-1zM15 4a3 3 0 0 1 3 3 3 3 0 0 1 2 5 3 3 0 0 1-2 5 3 3 0 0 1-6 1"/>',
+ bell:'<path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4zM10 21h4"/>',
+ scroll:'<path d="M7 4h11v13a3 3 0 0 1-3 3H6a3 3 0 0 1 0-6h1zM10 8h5M10 11h5"/>',
+ chat:'<path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/>'
+};
+function icon(name){ const t=document.createElement("template"); t.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'+(ICONS[name]||ICONS.star)+'</svg>'; return t.content.firstChild; }
+const unlocked=b=>b.progress>=b.target;
+async function loadBadges(){ try{ const list=await rpc("my_badges",cred()); const before=S.badges; S.badges=list;
+    if(before){ const old=new Set(before.filter(unlocked).map(b=>b.id)); const fresh=list.filter(b=>unlocked(b)&&!old.has(b.id)); if(fresh.length) toast(fresh[0]); }
+  }catch(e){} }
+function toast(b){ const t=el("div",{class:"toast",role:"status"},el("div",{class:"medal"},icon(b.icon)),el("div",{},el("b",{},"Badge débloqué"),b.name));
+  document.body.append(t); setTimeout(()=>t.remove(),4500); }
+function renderBadges(){
+  const list=S.badges; if(!list) return;
+  const n=list.filter(unlocked).length;
+  const grid=el("div",{class:"badges"},list.map(b=>{ const on=unlocked(b);
+    return el("button",{class:`bdg t${b.tier}${on?"":" locked"}`,"aria-label":`${b.name}${on?", débloqué":", verrouillé"}`,onclick:()=>{S.badgeOpen=S.badgeOpen===b.id?null:b.id;render();}},
+      el("div",{class:"medal"},icon(b.icon)),el("div",{class:"nm"},b.name),
+      on?null:el("div",{class:"pg"},el("i",{style:`width:${Math.round(100*b.progress/b.target)}%`}))); }));
+  const open=list.find(b=>b.id===S.badgeOpen);
+  $view.append(el("div",{class:"card"},el("div",{class:"week-head"},el("h2",{},"Mes badges"),el("span",{class:"pill"},`${n} / ${list.length}`)),
+    open?el("div",{class:"bdg-detail"},el("strong",{},open.name),el("p",{},open.desc+(unlocked(open)?" : débloqué.":` (${open.progress} / ${open.target}).`))):el("p",{class:"muted",style:"font-size:13px"},"Touche un badge pour voir comment le débloquer."),
+    grid));
+}
+
 /* ---------- Démarrage ---------- */
 async function start(){
   if(SUPABASE_URL.includes("VOTRE-PROJET")){ S.error="L'appli n'est pas encore reliée à sa base de données : renseigne SUPABASE_URL et SUPABASE_KEY en haut du fichier."; render(); return; }
   S.auth=loadAuth();
   checkForum();
-  if(S.auth){ try{ await loadWeek(); }catch(e){ if(/Code|Prénom|essais/.test(e.message)){ S.auth=null; saveAuth(null); } else S.error=e.message; } }
+  if(S.auth){ try{ await loadWeek(); loadBadges(); }catch(e){ if(/Code|Prénom|essais/.test(e.message)){ S.auth=null; saveAuth(null); } else S.error=e.message; } }
   render();
 }
 document.addEventListener("visibilitychange",async()=>{ if(document.visibilityState==="visible"&&S.auth&&!S.busy&&S.qIndex===null){ try{ await loadWeek(); render(); }catch(e){} } });
