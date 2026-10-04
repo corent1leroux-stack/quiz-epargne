@@ -74,6 +74,25 @@ p{margin:0}
 .bdg .pg{width:80%;height:4px;border-radius:2px;background:var(--line);overflow:hidden}
 .bdg .pg i{display:block;height:100%;background:var(--accent)}
 .btn.small{padding:10px 14px;font-size:14px}
+.format{align-self:flex-start;font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--accent);background:var(--accent-soft);padding:3px 10px;border-radius:99px}
+.choices.vf{flex-direction:row} .choices.vf .choice{flex:1;justify-content:center;font-weight:700;font-size:16px}
+.choice.picked{border-color:var(--accent);background:var(--accent-soft)} .choice.picked .k{background:var(--accent);color:var(--accent-ink)}
+.choice.missed{border-style:dashed;border-color:var(--ok)} .choice.missed .k{color:var(--ok)}
+.choice em{margin-left:auto;font-size:12px;font-style:normal;font-weight:700;color:var(--ok);white-space:nowrap}
+.k.box{border-radius:6px}
+div.choice{cursor:default}
+.numrow{display:flex;gap:8px;align-items:center}
+.numrow input{flex:1;font-size:20px;font-weight:700;text-align:right;font-variant-numeric:tabular-nums}
+.numrow .unit{font-weight:700;color:var(--muted)}
+.numfb{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.numfb div{border:1.5px solid var(--line);border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:2px}
+.numfb div.right{border-color:var(--ok);background:var(--ok-soft)} .numfb div.wrong{border-color:var(--bad);background:var(--bad-soft)}
+.numfb b{font-size:18px;font-variant-numeric:tabular-nums} .numfb small{font-size:12px;color:var(--muted)}
+.hint{font-size:13px;color:var(--muted);margin:0}
+.trialbar{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 14px;border-radius:12px;background:var(--gold);color:#fff;font-weight:700;font-size:13px}
+.trialbar .ghost-sm{color:#fff;text-decoration:underline}
+.invite{flex-direction:row;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.invite>div{flex:1;min-width:200px;display:flex;flex-direction:column;gap:4px}
 .by{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--gold)}
 .by svg{width:14px;height:14px}
 .propose select{width:100%;padding:12px 14px;border-radius:12px;border:1.5px solid var(--line);background:var(--bg);color:var(--ink);font:500 15px var(--body)}
@@ -213,7 +232,7 @@ nav svg{display:block;margin:0 auto 3px;width:20px;height:20px}
 <script>
 const L=["A","B","C","D"];
 const $view=document.getElementById("view"), $who=document.getElementById("who"), $nav=document.getElementById("nav");
-const S={proposals:null,themes:null,proposeOpen:false,pdraft:null,cur:null,pending:null,phase:null,boards:null,compose:null,filter:null,flash:null,badges:null,badgeOpen:null,forum:null,forumSeen:0,prizes:null,auth:null,tab:"quiz",week:null,nextStart:null,mine:[],qIndex:null,busy:false,board:null,archives:null,review:null,error:null};
+const S={mode:"season",season:null,trial:null,sel:[],numVal:"",proposals:null,themes:null,proposeOpen:false,pdraft:null,cur:null,pending:null,phase:null,boards:null,compose:null,filter:null,flash:null,badges:null,badgeOpen:null,forum:null,forumSeen:0,prizes:null,auth:null,tab:"quiz",week:null,nextStart:null,mine:[],qIndex:null,busy:false,board:null,archives:null,review:null,error:null};
 
 /* ---------- Accès à la base (fonctions Supabase) ---------- */
 async function rpc(fn,args={}){
@@ -291,11 +310,16 @@ function logout(){ stopTimer(); S.cur=null; S.badges=null; S.auth=null; saveAuth
 
 /* ---------- Semaine en cours ---------- */
 async function loadWeek(){
-  S.week=await rpc("current_week");
-  if(!S.week){ S.nextStart=await rpc("next_week_start"); S.mine=[]; S.pending=null; return; }
+  S.season=await rpc("current_week");
+  S.trial=await rpc("trial_week").catch(()=>null);
+  if(!S.season) S.nextStart=await rpc("next_week_start");
+  if(S.mode==="trial"&&!S.trial) S.mode="season";
+  S.week=S.mode==="trial"?S.trial:S.season;
+  if(!S.week){ S.mine=[]; S.pending=null; return; }
   const r=await rpc("my_week",{...cred(),p_week:S.week.id});
   S.mine=r.answers||[]; S.pending=r.pending?r.pending.q:null;
 }
+async function switchMode(m){ S.mode=m; S.cur=null; S.qIndex=null; stopTimer(); S.busy=true; render(); try{ await loadWeek(); }catch(e){ S.flash=e.message; } S.busy=false; render(); window.scrollTo(0,0); }
 let timerId=null;
 function stopTimer(){ if(timerId){ clearInterval(timerId); timerId=null; } }
 function remaining(){ return S.cur? Math.max(0,S.cur.limit-(Date.now()-S.cur.t0)/1000) : 0; }
@@ -303,65 +327,132 @@ function tick(){
   const r=remaining(), bar=document.getElementById("tbar"), txt=document.getElementById("tsec");
   if(bar){ bar.style.width=(100*r/S.cur.limit)+"%"; bar.classList.toggle("hurry",r<=10); }
   if(txt) txt.textContent=Math.ceil(r)+" s";
-  if(r<=0&&!S.busy){ stopTimer(); answer(S.cur.q,-1); }
+  if(r<=0&&!S.busy){ stopTimer(); answer(S.cur.q,-1,null); }
 }
 async function startQ(i){
   if(S.busy) return; S.busy=true; render();
   try{ const r=await rpc("start_question",{...cred(),p_week:S.week.id,p_q:i});
-    S.cur={...r,t0:Date.now()-r.elapsed*1000}; S.pending=i; S.qIndex=null;
+    S.cur={...r,t0:Date.now()-r.elapsed*1000}; S.pending=i; S.qIndex=null; S.sel=[]; S.numVal="";
     stopTimer(); timerId=setInterval(tick,250);
   }catch(e){ S.flash=e.message; }
   S.busy=false; render(); tick();
 }
+const FORMATS={qcm:"Une seule bonne réponse",vf:"Vrai ou faux",num:"Réponse à taper",multi:"Plusieurs bonnes réponses",order:"À remettre dans l'ordre"};
+function fmtNum(v){ return v==null?"":Number(v).toLocaleString("fr-FR",{maximumFractionDigits:2}); }
+function parseNum(t){ const x=String(t).replace(/[\s  €%]/g,"").replace(",","."); return x===""||isNaN(+x)?null:+x; }
+function trialBanner(){ return el("div",{class:"trialbar"},el("span",{},"Série d'essai · hors classement"),el("button",{class:"ghost-sm",onclick:()=>switchMode("season")},"Revenir à la série de la semaine")); }
+function trialInvite(){
+  if(!S.trial) return null;
+  return el("div",{class:"card invite"},el("div",{},el("h3",{},"Série d'essai"),el("p",{class:"muted",style:"font-size:14px"},"10 questions pour découvrir les formats : vrai/faux, réponse à taper, plusieurs réponses, classement. Hors classement, et tu peux la recommencer.")),
+    el("button",{class:"btn ghost",onclick:()=>switchMode("trial")},"Essayer"));
+}
 function renderQuiz(){
-  const w=S.week;
-  if(!w){ $view.append(el("div",{class:"card"},el("h2",{},"Pas de série ouverte"),el("p",{class:"muted"},S.nextStart?`Prochaine série le ${fmt(S.nextStart)}.`:"Les prochaines questions arrivent bientôt."))); return; }
+  const w=S.week, trial=S.mode==="trial";
+  if(trial) $view.append(trialBanner());
+  if(!w){ $view.append(el("div",{class:"card"},el("h2",{},"Pas de série ouverte"),el("p",{class:"muted"},S.nextStart?`Prochaine série le ${fmt(S.nextStart)}.`:"Les prochaines questions arrivent bientôt."))); const inv=trialInvite(); if(inv) $view.append(inv); return; }
   const n=w.count, mine=S.mine, done=mine.length>=n;
   const card=el("div",{class:"card"},
-    el("div",{class:"week-head"},el("div",{},el("h3",{},w.label),el("h2",{},w.theme)),el("span",{class:"pill"},`Jusqu'au ${fmt(w.end)}`)),
+    el("div",{class:"week-head"},el("div",{},el("h3",{},w.label),el("h2",{},w.theme)),trial?null:el("span",{class:"pill"},`Jusqu'au ${fmt(w.end)}`)),
     el("div",{class:"dots"},Array.from({length:n},(x,i)=>el("span",{class:i<mine.length?(mine[i].correct?"ok":"bad"):(i===mine.length&&!done?"cur":"")}))));
   if(S.flash){ card.append(el("p",{class:"error"},S.flash)); S.flash=null; }
   if(done&&S.qIndex===null){
     const sc=mine.filter(m=>m.correct).length;
-    card.append(el("div",{},el("p",{class:"muted"},"Ton score cette semaine"),el("div",{class:"score-big"},sc,el("span",{}," / "+n))),
-      el("p",{},sc===n?"Sans faute. Bravo.":sc>=0.7*n?"Beau score. Les corrections détaillées sont dans ton parcours.":"Relis les corrections dans ton parcours : elles serviront pour la suite."),
-      el("button",{class:"btn ghost",onclick:()=>{setTab("archive");openReview(w.id);}},"Voir les corrections"),
-      el("button",{class:"btn",onclick:()=>setTab("board")},"Voir le classement"),
-      el("p",{class:"muted",style:"font-size:13px;text-align:center"},`${w.finished} participant${w.finished>1?"s ont":" a"} terminé la série.`));
-    $view.append(card); return;
+    card.append(el("div",{},el("p",{class:"muted"},trial?"Ton score à l'essai":"Ton score cette semaine"),el("div",{class:"score-big"},sc,el("span",{}," / "+n))),
+      el("p",{},sc===n?"Sans faute. Bravo.":sc>=0.7*n?"Beau score. Les corrections détaillées sont dans ton parcours.":"Relis les corrections dans ton parcours : elles serviront pour la suite."));
+    if(trial){
+      card.append(el("button",{class:"btn",onclick:async()=>{ try{ await rpc("reset_trial",cred()); await switchMode("trial"); }catch(e){ S.flash=e.message; render(); } }},"Recommencer l'essai"),
+        el("button",{class:"btn ghost",onclick:()=>switchMode("season")},"Revenir à la série de la semaine"));
+    } else {
+      card.append(el("button",{class:"btn ghost",onclick:()=>{setTab("archive");openReview(w.id);}},"Voir les corrections"),
+        el("button",{class:"btn",onclick:()=>setTab("board")},"Voir le classement"),
+        el("p",{class:"muted",style:"font-size:13px;text-align:center"},`${w.finished} participant${w.finished>1?"s ont":" a"} terminé la série.`));
+    }
+    $view.append(card); if(!trial){ const inv=trialInvite(); if(inv) $view.append(inv); } return;
   }
   // Correction de la question qui vient d'être jouée
   if(S.qIndex!==null){
     const i=S.qIndex, a=mine[i], last=mine.length>=n;
     card.append(el("div",{class:"qnum"},el("span",{},`Question ${i+1} sur ${n}`),levelTag(i,n)),el("div",{class:"question"},a.text),byLine(a.by));
-    card.append(el("div",{class:"choices"},a.choices.map((c,k)=>{ let cls="choice"; if(k===a.answer) cls+=" right"; else if(k===a.choice) cls+=" wrong";
-      return el("button",{class:cls,disabled:true},el("span",{class:"k"},L[k]),el("span",{},c)); })));
-    card.append(el("div",{class:"explain"},el("b",{},a.choice===-1?"Temps écoulé":a.correct?"Bonne réponse":"Mauvaise réponse"),a.explain));
-    if(a.tip) card.append(el("div",{class:"tip"},el("b",{},"À retenir"),a.tip));
-    card.append(el("button",{class:"btn",disabled:S.busy,onclick:async()=>{ if(last){ S.qIndex=null; try{ S.week=await rpc("current_week")||S.week; }catch(e){} render(); } else startQ(i+1); }},last?"Voir mon score":"Question suivante"));
+    card.append(...feedbackBlock(a));
+    card.append(el("button",{class:"btn",disabled:S.busy,onclick:async()=>{ if(last){ S.qIndex=null; try{ if(!trial) S.season=S.week=await rpc("current_week")||S.week; }catch(e){} render(); } else startQ(i+1); }},last?"Voir mon score":"Question suivante"));
     $view.append(card); return;
   }
   const i=mine.length;
   // Question en cours, avec le chrono
   if(S.cur&&S.cur.q===i){
-    const q=S.cur;
+    const q=S.cur, t=q.type||"qcm";
     card.append(el("div",{class:"qnum"},el("span",{},`Question ${i+1} sur ${n}`),levelTag(i,n)),
       el("div",{class:"timer"},el("div",{class:"track"},el("div",{class:"bar",id:"tbar"})),el("span",{id:"tsec"},Math.ceil(remaining())+" s")),
-      el("div",{class:"question"},q.text),byLine(q.by),
-      el("div",{class:"choices"},q.choices.map((c,k)=>el("button",{class:"choice",disabled:S.busy,onclick:()=>answer(i,k)},el("span",{class:"k"},L[k]),el("span",{},c)))));
+      el("span",{class:"format"},FORMATS[t]),
+      el("div",{class:"question"},q.text),byLine(q.by));
+    card.append(...answerArea(q,i));
     $view.append(card); return;
   }
   // Avant d'afficher la question
   const resumed=S.pending===i;
   card.append(el("div",{class:"qnum"},el("span",{},`Question ${i+1} sur ${n}`),levelTag(i,n)),
     el("div",{class:"ready"},el("div",{class:"clock"},icon("clock")),
-      el("p",{},resumed?"Cette question a déjà été affichée : le chrono a continué de tourner.":`Tu auras ${w.limit} secondes pour répondre dès que la question s'affiche. Sans réponse, elle compte comme fausse.`)),
+      el("p",{},resumed?"Cette question a déjà été affichée : le chrono a continué de tourner.":`Le chrono démarre dès que la question s'affiche : ${w.limit} secondes, et 45 secondes pour les réponses à taper, à cocher ou à classer. Sans réponse, la question compte comme fausse.`)),
     el("button",{class:"btn",disabled:S.busy,onclick:()=>startQ(i)},resumed?"Reprendre la question":(i===0?"Commencer la série":"Afficher la question")));
   $view.append(card);
+  if(!trial&&i===0){ const inv=trialInvite(); if(inv) $view.append(inv); }
 }
-async function answer(i,k){
+// Zone de réponse selon le format
+function answerArea(q,i){
+  const t=q.type||"qcm";
+  if(t==="qcm"||t==="vf") return [el("div",{class:"choices"+(t==="vf"?" vf":"")},q.choices.map((c,k)=>el("button",{class:"choice",disabled:S.busy,onclick:()=>answer(i,k,null)},t==="vf"?null:el("span",{class:"k"},L[k]),el("span",{},c))))];
+  if(t==="num"){
+    const inp=el("input",{id:"numans",type:"text",inputmode:"decimal",autocomplete:"off",placeholder:"Ta réponse",value:S.numVal||"",oninput:e=>{S.numVal=e.target.value;}});
+    const err=el("p",{class:"error"});
+    setTimeout(()=>{ const x=document.getElementById("numans"); if(x) x.focus(); },50);
+    return [el("form",{class:"numrow",onsubmit:e=>{ e.preventDefault(); const v=parseNum(inp.value); if(v===null){ err.textContent="Tape un nombre, par exemple 12000 ou 7,5."; return; } answer(i,null,v); }},
+      inp,q.unit?el("span",{class:"unit"},q.unit):null,el("button",{class:"btn small",type:"submit",disabled:S.busy},"Valider")),err];
+  }
+  if(t==="multi"){
+    const sel=S.sel||(S.sel=[]);
+    return [el("div",{class:"choices"},q.choices.map((c,k)=>el("button",{class:"choice"+(sel.includes(k)?" picked":""),"aria-pressed":sel.includes(k)?"true":"false",disabled:S.busy,onclick:()=>{ const p=sel.indexOf(k); p<0?sel.push(k):sel.splice(p,1); render(); }},el("span",{class:"k box"},sel.includes(k)?"✓":""),el("span",{},c)))),
+      el("button",{class:"btn",disabled:S.busy||!sel.length,onclick:()=>answer(i,null,[...sel].sort((a,b)=>a-b))},sel.length?`Valider mes ${sel.length} réponse${sel.length>1?"s":""}`:"Coche au moins une réponse")];
+  }
+  if(t==="order"){
+    const sel=S.sel||(S.sel=[]), full=sel.length===q.choices.length;
+    return [q.first?el("p",{class:"hint"},`1 = ${q.first.toLowerCase()} · ${q.choices.length} = ${(q.last||"").toLowerCase()}`):null,
+      el("div",{class:"choices"},q.choices.map((c,k)=>{ const pos=sel.indexOf(k);
+        return el("button",{class:"choice"+(pos>=0?" picked":""),disabled:S.busy,onclick:()=>{ pos<0?sel.push(k):sel.splice(pos); render(); }},el("span",{class:"k"},pos>=0?String(pos+1):"·"),el("span",{},c)); })),
+      el("div",{class:"post-actions"},el("button",{class:"btn ghost small",disabled:!sel.length,onclick:()=>{ S.sel=[]; render(); }},"Recommencer"),
+        el("button",{class:"btn small",style:"flex:1",disabled:S.busy||!full,onclick:()=>answer(i,null,[...sel])},full?"Valider mon classement":`Touche les réponses dans l'ordre (${sel.length}/${q.choices.length})`))];
+  }
+  return [];
+}
+// Correction affichée après une réponse (et dans les corrections)
+function feedbackBlock(a){
+  const t=a.type||"qcm", timeout=a.choice===-1, out=[];
+  const title=timeout?"Temps écoulé":a.correct?"Bonne réponse":(t==="multi"||t==="order")?"Pas tout à fait":"Mauvaise réponse";
+  if(t==="qcm"||t==="vf"){
+    out.push(el("div",{class:"choices"+(t==="vf"?" vf":"")},a.choices.map((c,k)=>{ let cls="choice"; if(k===a.answer) cls+=" right"; else if(k===a.choice) cls+=" wrong";
+      return el("div",{class:cls},t==="vf"?null:el("span",{class:"k"},L[k]),el("span",{},c)); })));
+  } else if(t==="num"){
+    const given=a.given==null?null:Number(a.given);
+    out.push(el("div",{class:"numfb"},
+      el("div",{class:a.correct?"right":"wrong"},el("small",{},"Ta réponse"),el("b",{},given==null?"—":`${fmtNum(given)} ${a.unit||""}`)),
+      el("div",{class:"right"},el("small",{},"Bonne réponse"),el("b",{},`${fmtNum(a.answer_num)} ${a.unit||""}`),a.tol?el("small",{},`acceptée à ${fmtNum(a.tol)} près`):null)));
+  } else if(t==="multi"){
+    const good=a.answer_json||[], picked=Array.isArray(a.given)?a.given:[];
+    out.push(el("div",{class:"choices"},a.choices.map((c,k)=>{ const g=good.includes(k), p=picked.includes(k);
+      let cls="choice"+(g&&p?" right":g?" missed":p?" wrong":"");
+      return el("div",{class:cls},el("span",{class:"k box"},g?"✓":p?"✗":""),el("span",{},c),g&&!p?el("em",{},"à cocher"):null); })));
+  } else if(t==="order"){
+    const good=a.answer_json||[], given=Array.isArray(a.given)?a.given:[];
+    out.push(el("p",{class:"hint"},"Le bon ordre"+(a.first?` (de « ${a.first.toLowerCase()} » à « ${(a.last||"").toLowerCase()} »)`:"")),
+      el("div",{class:"choices"},good.map((k,pos)=>el("div",{class:"choice"+(given[pos]===k?" right":" missed")},el("span",{class:"k"},String(pos+1)),el("span",{},a.choices[k])))));
+    if(given.length&&!a.correct) out.push(el("p",{class:"muted",style:"font-size:13px"},"Ton ordre : "+given.map(k=>a.choices[k]).join(" → ")));
+  }
+  out.push(el("div",{class:"explain"},el("b",{},title),a.explain));
+  if(a.tip) out.push(el("div",{class:"tip"},el("b",{},"À retenir"),a.tip));
+  return out;
+}
+async function answer(i,choice,given){
   if(S.busy) return; S.busy=true; stopTimer();
-  try{ const r=await rpc("submit_answer",{...cred(),p_week:S.week.id,p_q:i,p_choice:k}); S.mine[i]=r; S.qIndex=i; S.cur=null; S.pending=null; loadBadges(); }
+  try{ const r=await rpc("submit_answer",{...cred(),p_week:S.week.id,p_q:i,p_choice:choice,p_given:given}); S.mine[i]=r; S.qIndex=i; S.cur=null; S.pending=null; S.sel=[]; S.numVal=""; loadBadges(); }
   catch(e){ S.flash=e.message; S.cur=null; try{ await loadWeek(); }catch(x){} }
   S.busy=false; render();
 }
@@ -416,12 +507,9 @@ function renderArchive(){
     if(S.review.loading){ $view.append(el("div",{class:"notice"},"Chargement…")); return; }
     if(S.review.error){ $view.append(el("div",{class:"card"},back,el("div",{class:"notice"},S.review.error))); return; }
     const r=S.review, card=el("div",{class:"card"},back,el("h3",{},r.label),el("h2",{},r.theme));
-    r.items.forEach((it,i)=>{ const ok=it.choice===it.answer;
-      card.append(el("div",{class:"review"},el("span",{class:"tag "+(it.choice==null?"":ok?"ok":"bad")},it.choice==null?"Non répondu":it.choice===-1?"Temps écoulé":ok?"Juste":"Faux"),
-        el("strong",{},`${i+1}. ${it.q}`),byLine(it.by),el("p",{},`Réponse : ${L[it.answer]}. ${it.choices[it.answer]}`),
-        it.choice!=null&&it.choice>=0&&!ok?el("p",{class:"muted"},`Ta réponse : ${L[it.choice]}. ${it.choices[it.choice]}`):null,
-        el("p",{class:"muted"},it.explain),
-        it.tip?el("div",{class:"tip"},el("b",{},"À retenir"),it.tip):null)); });
+    r.items.forEach((it,i)=>{
+      card.append(el("div",{class:"review"},el("span",{class:"tag "+(it.choice==null&&it.given==null?"":it.correct?"ok":"bad")},it.choice==null&&it.given==null?"Non répondu":it.choice===-1?"Temps écoulé":it.correct?"Juste":"Faux"),
+        el("strong",{},`${i+1}. ${it.text}`),byLine(it.by),...feedbackBlock(it))); });
     $view.append(card); return;
   }
   renderBadges();
@@ -434,7 +522,7 @@ function renderArchive(){
       el("button",{onclick:()=>openReview(w.id)},"Corrections"))))));
 }
 
-function byLine(by){ return by?el("div",{class:"by"},icon("feather"),`Question proposée par ${by}`):null; }
+function byLine(by){ return by?el("div",{class:"by"},icon("feather"),`Question proposée par ${by}`):document.createTextNode(""); }
 
 /* ---------- Niveau de difficulté ---------- */
 // Séries de 10 : questions 1-3 faciles, 4-6 intermédiaires, 7-8 difficiles, 9-10 expert

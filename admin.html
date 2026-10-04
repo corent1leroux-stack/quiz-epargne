@@ -74,6 +74,25 @@ p{margin:0}
 .bdg .pg{width:80%;height:4px;border-radius:2px;background:var(--line);overflow:hidden}
 .bdg .pg i{display:block;height:100%;background:var(--accent)}
 .btn.small{padding:10px 14px;font-size:14px}
+.format{align-self:flex-start;font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--accent);background:var(--accent-soft);padding:3px 10px;border-radius:99px}
+.choices.vf{flex-direction:row} .choices.vf .choice{flex:1;justify-content:center;font-weight:700;font-size:16px}
+.choice.picked{border-color:var(--accent);background:var(--accent-soft)} .choice.picked .k{background:var(--accent);color:var(--accent-ink)}
+.choice.missed{border-style:dashed;border-color:var(--ok)} .choice.missed .k{color:var(--ok)}
+.choice em{margin-left:auto;font-size:12px;font-style:normal;font-weight:700;color:var(--ok);white-space:nowrap}
+.k.box{border-radius:6px}
+div.choice{cursor:default}
+.numrow{display:flex;gap:8px;align-items:center}
+.numrow input{flex:1;font-size:20px;font-weight:700;text-align:right;font-variant-numeric:tabular-nums}
+.numrow .unit{font-weight:700;color:var(--muted)}
+.numfb{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.numfb div{border:1.5px solid var(--line);border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:2px}
+.numfb div.right{border-color:var(--ok);background:var(--ok-soft)} .numfb div.wrong{border-color:var(--bad);background:var(--bad-soft)}
+.numfb b{font-size:18px;font-variant-numeric:tabular-nums} .numfb small{font-size:12px;color:var(--muted)}
+.hint{font-size:13px;color:var(--muted);margin:0}
+.trialbar{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 14px;border-radius:12px;background:var(--gold);color:#fff;font-weight:700;font-size:13px}
+.trialbar .ghost-sm{color:#fff;text-decoration:underline}
+.invite{flex-direction:row;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.invite>div{flex:1;min-width:200px;display:flex;flex-direction:column;gap:4px}
 .by{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--gold)}
 .by svg{width:14px;height:14px}
 .propose select{width:100%;padding:12px 14px;border-radius:12px;border:1.5px solid var(--line);background:var(--bg);color:var(--ink);font:500 15px var(--body)}
@@ -231,6 +250,7 @@ textarea:focus,select:focus{outline:none;border-color:var(--accent)}
 .radio{display:flex;align-items:center;gap:8px}
 .radio input{width:auto}
 .ok-msg{color:var(--ok);font-size:14px;font-weight:600}
+.qstat .badge{align-self:flex-start}
 .back{display:inline-block;margin-top:8px;font:600 13px var(--body);color:var(--accent);text-decoration:none}
 nav button{position:relative;font-size:11px!important}
 nav button .count{position:absolute;top:3px;right:calc(50% - 22px);min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:var(--bad);color:#fff;font:700 11px/18px var(--body);text-align:center}
@@ -341,17 +361,27 @@ function renderSuivi(){
     const r=pct(q.ok,q.n), cls=r==null?"":r<50?"low":r<75?"mid":"high";
     card.append(el("div",{class:"qstat"},
       el("div",{class:"top"},el("strong",{},`${i+1}. ${q.q}`),el("span",{class:"rate "+cls},r==null?"—":r+" %")),
-      el("div",{class:"dist"},q.choices.map((c,k)=>{ const n=(q.dist||[])[k]||0; return el("div",{class:"bar"+(k===q.answer?" good":""),title:c},
-        el("span",{},L[k]),el("div",{class:"track"},el("div",{class:"fill",style:`width:${q.n?Math.round(100*n/q.n):0}%`})),el("span",{class:"n"},n)); })),
-      el("p",{class:"muted",style:"font-size:13px"},`Bonne réponse : ${L[q.answer]}. ${q.choices[q.answer]}`+(q.n?` · ${q.n} réponse${q.n>1?"s":""}`:"")),
+      el("span",{class:"badge"},FMT[q.type||"qcm"]),
+      (q.type||"qcm")==="qcm"||q.type==="vf"?el("div",{class:"dist"},q.choices.map((c,k)=>{ const n=(q.dist||[])[k]||0; return el("div",{class:"bar"+(k===q.answer?" good":""),title:c},
+        el("span",{},q.type==="vf"?c[0]:L[k]),el("div",{class:"track"},el("div",{class:"fill",style:`width:${q.n?Math.round(100*n/q.n):0}%`})),el("span",{class:"n"},n)); })):null,
+      el("p",{class:"muted",style:"font-size:13px"},`Bonne réponse : ${goodAnswer(q)}`+(q.n?` · ${q.n} réponse${q.n>1?"s":""}`:"")),
       el("div",{},el("button",{class:"link",onclick:()=>{S.edit=i;S.flash=null;render();window.scrollTo(0,0);}},"Modifier la question"))));
   });
   $view.append(card);
   $view.append(el("p",{class:"muted",style:"font-size:13px"},"Le pourcentage indique la part de bonnes réponses. En rouge, moins de 50 % : un bon sujet à reprendre en atelier."));
 }
 
+const FMT={qcm:"QCM",vf:"Vrai ou faux",num:"Réponse à taper",multi:"Plusieurs réponses",order:"Classement"};
+function goodAnswer(q){ const t=q.type||"qcm";
+  if(t==="qcm") return `${L[q.answer]}. ${q.choices[q.answer]}`;
+  if(t==="vf") return q.choices[q.answer];
+  if(t==="num") return `${Number(q.answer_num).toLocaleString("fr-FR")} ${q.unit||""}`+(Number(q.tol)?` (à ${Number(q.tol).toLocaleString("fr-FR")} près)`:"");
+  if(t==="multi") return (q.answer_json||[]).map(k=>q.choices[k]).join(" ; ");
+  if(t==="order") return (q.answer_json||[]).map(k=>q.choices[k]).join(" → ");
+  return ""; }
 function renderEdit(w){
   const i=S.edit, q=w.questions[i];
+  if(q.type&&q.type!=="qcm"&&q.type!=="vf") return renderEditText(w,i,q);
   const text=el("textarea",{id:"q-text",value:q.q});
   const choices=q.choices.map((c,k)=>el("input",{id:"q-c"+k,type:"text",value:c}));
   const radios=q.choices.map((c,k)=>{ const r=el("input",{type:"radio",name:"good",id:"q-r"+k,value:String(k)}); if(k===q.answer) r.checked=true; return r; });
@@ -375,6 +405,22 @@ function renderEdit(w){
     el("div",{class:"field"},el("label",{for:"q-exp"},"Explication"),explain),
     el("div",{class:"field"},el("label",{for:"q-tip"},"À retenir (facultatif)"),tip),
     err,btn));
+}
+
+// Pour les réponses à taper, multiples ou à classer : on modifie le texte et les explications
+function renderEditText(w,i,q){
+  const text=el("textarea",{value:q.q}), explain=el("textarea",{value:q.explain||""}), tip=el("textarea",{value:q.tip||"",style:"min-height:60px"});
+  const err=el("p",{class:"error",role:"alert"}), btn=el("button",{class:"btn",type:"submit"},"Enregistrer");
+  $view.append(el("form",{class:"card",onsubmit:async e=>{ e.preventDefault(); err.textContent=""; btn.disabled=true;
+    try{ await rpc("admin_update_question",{p_pass:S.pass,p_week:w.id,p_q:i,p_text:text.value,p_choices:null,p_answer:null,p_explain:explain.value,p_tip:tip.value});
+      await refresh(); S.edit=null; S.flash="Question enregistrée."; render(); window.scrollTo(0,0); }
+    catch(x){ err.textContent=x.message; btn.disabled=false; } }},
+    el("button",{class:"link",type:"button",onclick:()=>{S.edit=null;render();}},"← Retour à la série"),
+    el("h3",{},`${w.label} · question ${i+1} · ${FMT[q.type]}`),
+    el("div",{class:"field"},el("label",{},"Question"),text),
+    el("p",{class:"notice"},`Bonne réponse : ${goodAnswer(q)}. Pour ce format, la réponse elle-même ne se modifie pas ici : demande-moi si elle doit changer.`),
+    el("div",{class:"field"},el("label",{},"Explication"),explain),
+    el("div",{class:"field"},el("label",{},"À retenir (facultatif)"),tip),err,btn));
 }
 
 /* ---------- Questions des joueurs ---------- */
