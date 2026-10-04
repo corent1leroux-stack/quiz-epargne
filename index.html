@@ -376,16 +376,13 @@ async function loadBoard(){
 }
 function renderBoard(){
   if(S.boards&&S.boards.error){ $view.append(el("div",{class:"notice"},S.boards.error)); return; }
-  const midEnd=S.prizes?fmt(S.prizes.mid_end):"31 décembre";
-  $view.append(el("div",{class:"seg",role:"tablist"},
-    [["season","Saison complète"],["mid",`Mi-saison · ${midEnd}`]].map(([k,t])=>el("button",{"aria-selected":S.phase===k?"true":"false",onclick:()=>{ S.phase=k; render(); if(!(S.boards&&S.boards[k])) loadBoard(); }},t))));
   const data=S.boards&&S.boards[S.phase];
   if(!data){ $view.append(el("div",{class:"notice"},"Chargement du classement…")); return; }
   let rank=0,prev=null; const rows=data.map((r,i)=>{ if(r.points!==prev){rank=i+1;prev=r.points;} return {...r,rank}; });
   if(!rows.length){ $view.append(el("div",{class:"card"},el("h2",{},"Classement"),el("p",{class:"muted"},"Personne n'a encore joué. Le premier qui répond prend la tête."))); renderPrizes(); return; }
   const me=S.auth.pseudo.toLowerCase(), top=rows.slice(0,3), order=[top[1],top[0],top[2]];
   $view.append(
-    el("div",{class:"card"},el("h3",{},S.phase==="mid"?`Classement de mi-saison · arrêté au ${midEnd}`:"Classement de la saison complète"),
+    el("div",{class:"card"},el("h3",{},"Classement de la saison · jusqu'au 28 mars"),
       el("div",{class:"podium"},order.map((r,j)=>r?el("div",{class:"step s"+[2,1,3][j]},el("div",{class:"nm"},r.pseudo),el("div",{class:"block"},r.points)):el("div")))),
     el("div",{class:"card"},el("p",{class:"muted",style:"font-size:13px"},"Touche un joueur pour voir ses badges."),el("ol",{class:"board"},rows.map(r=>[el("li",{class:"row"+(r.rank===1?" p1":"")+(r.pseudo.toLowerCase()===me?" mine":""),tabindex:"0",onclick:()=>openPlayer(r.pseudo)},
       el("div",{class:"rank"},r.rank),
@@ -404,7 +401,7 @@ function renderPrizes(){
   if(!S.prizes) return;
   const p=(S.prizes[S.phase]||[]).filter(x=>x&&x.label);
   if(!p.length) return;
-  $view.append(el("div",{class:"card"},el("h3",{},S.phase==="mid"?`À gagner au ${fmt(S.prizes.mid_end)}`:"À gagner en fin de saison"),
+  $view.append(el("div",{class:"card"},el("h3",{},"À gagner en fin de saison"),
     el("div",{class:"prizes"},p.map(x=>el("div",{class:"prize r"+x.rank},el("div",{class:"medal"},x.rank),el("span",{},x.label)))),
     el("p",{class:"muted",style:"font-size:13px"},"Un point par bonne réponse. À égalité, le nombre de séries sans faute départage, puis le nombre de séries jouées.")));
 }

@@ -500,7 +500,7 @@ function deleteForm(p){
 
 /* ---------- Lots ---------- */
 function renderPrizes(){
-  const P=S.data.prizes||{}, phases=[["mid",`Classement de mi-saison (au ${P.mid_end?fmt(P.mid_end):"31 décembre"})`],["season","Classement final de la saison"]];
+  const P=S.data.prizes||{}, phases=[["season","Classement de la saison (28 mars)"]];
   const inputs={}, cur={};
   phases.forEach(([ph])=>{ cur[ph]={}; (P[ph]||[]).forEach(p=>cur[ph][p.rank]=p.label); inputs[ph]=[1,2,3].map(r=>el("input",{id:`prize-${ph}-${r}`,type:"text",maxlength:"120",value:cur[ph][r]||""})); });
   const err=el("p",{class:"error",role:"alert"}), btn=el("button",{class:"btn",type:"submit"},"Enregistrer les lots");
@@ -508,7 +508,7 @@ function renderPrizes(){
     try{ for(const [ph] of phases) for(let r=1;r<=3;r++){ const v=inputs[ph][r-1].value.trim(); if(v!==(cur[ph][r]||"")) await rpc("admin_set_prize",{p_pass:S.pass,p_phase:ph,p_rank:r,p_label:v}); }
       await refresh(); S.flash="Lots enregistrés. Ils s'affichent sous chaque classement."; render(); }
     catch(x){ err.textContent=x.message; btn.disabled=false; } }},
-    el("h2",{},"Lots des podiums"),el("p",{class:"muted"},"Ils apparaissent pour tous les joueurs, sous le classement correspondant."),
+    el("h2",{},"Lots des podiums"),el("p",{class:"muted"},"Ils apparaissent pour tous les joueurs, sous le classement."),
     phases.map(([ph,title])=>el("div",{style:"display:flex;flex-direction:column;gap:10px"},el("h3",{},title),
       [1,2,3].map(r=>el("div",{class:"field"},el("label",{for:`prize-${ph}-${r}`},r===1?"1re place":`${r}e place`),inputs[ph][r-1])))),
     err,btn));
