@@ -16,6 +16,7 @@
 /* ================== À REMPLIR (étape 3 du guide) ================== */
 const SUPABASE_URL = "https://shtuxeaqijoziohwlclx.supabase.co";
 const SUPABASE_KEY = "sb_publishable_4TEnAMm1Uu_MON6riVHtiw_tHZ1xA2v";
+const VAPID_PUBLIC = "BCTXpbD6dxy2zb6u7gVVWHsAIQHzGB66jXVChij9imDJXuQIdOrP_syrjn1hnALQs2qtSlDKEF4ZRjRTTM0xkig";
 /* ================================================================== */
 </script>
 <style>
@@ -154,6 +155,7 @@ a.q{color:var(--accent);text-decoration:underline;text-underline-offset:3px}
 .like svg{width:16px;height:16px}
 .like.on{color:var(--accent);border-color:var(--accent);background:var(--accent-soft)}
 .okmsg{color:var(--ok);font-size:14px;font-weight:600}
+.pushline{display:flex;justify-content:center;align-items:center;gap:10px;font-size:13px;color:var(--muted);padding:4px 0}
 .thread .pending{font-size:13px;color:var(--gold);font-weight:600}
 .question{font:600 19px/1.35 var(--display);letter-spacing:-.01em;text-wrap:pretty}
 .choices{display:flex;flex-direction:column;gap:10px}
@@ -282,7 +284,7 @@ function render(){
   $nav.hidden=!S.auth;
   if(S.error){ $view.append(el("div",{class:"notice"},S.error),el("button",{class:"btn ghost",onclick:()=>{S.error=null;start();}},"Réessayer")); return; }
   if(!S.auth) return renderLogin();
-  if(S.tab==="quiz"){ if(S.review) renderReview(); else { renderQuiz(); renderHistory(); } } else if(S.tab==="board") renderBoard(); else if(S.tab==="forum") renderForum(); else renderBadges();
+  if(S.tab==="quiz"){ if(S.review) renderReview(); else { renderQuiz(); renderPush(); renderHistory(); } } else if(S.tab==="board") renderBoard(); else if(S.tab==="forum") renderForum(); else renderBadges();
   updateDot();
 }
 
@@ -298,7 +300,7 @@ function renderLogin(){
     if(p.length<2){ err.textContent="Indique ton prénom."; return; }
     if(!/^\d{4}$/.test(c)){ err.textContent="Le code doit contenir 4 chiffres."; return; }
     btn.disabled=true; btn.textContent="Connexion…";
-    try{ const r=await rpc("join_quiz",{p_pseudo:p,p_pin:c}); S.auth={pseudo:r.pseudo,pin:c}; saveAuth(S.auth); await loadWeek(); loadBadges(); loadArchives(); render(); }
+    try{ const r=await rpc("join_quiz",{p_pseudo:p,p_pin:c}); S.auth={pseudo:r.pseudo,pin:c}; saveAuth(S.auth); await loadWeek(); loadBadges(); loadArchives(); initPush(); render(); }
     catch(x){ err.textContent=x.message; btn.disabled=false; btn.textContent="Entrer"; }
   }},
     el("h2",{},"Bienvenue dans le quiz"),
@@ -309,7 +311,7 @@ function renderLogin(){
     err,btn);
   $view.append(form);
 }
-function logout(){ stopTimer(); S.cur=null; S.badges=null; S.archives=null; S.review=null; S.auth=null; saveAuth(null); S.mine=[]; S.qIndex=null; S.tab="quiz"; render(); }
+function logout(){ stopTimer(); if(PUSH.sub){ rpc("remove_push",{p_endpoint:PUSH.sub.endpoint}).catch(()=>{}); PUSH.sub.unsubscribe().catch(()=>{}); PUSH.sub=null; } S.cur=null; S.badges=null; S.archives=null; S.review=null; S.auth=null; saveAuth(null); S.mine=[]; S.qIndex=null; S.tab="quiz"; render(); }
 
 /* ---------- Semaine en cours ---------- */
 async function loadWeek(){
@@ -742,12 +744,65 @@ function renderPropose(){
   $view.append(card);
 }
 
+
+/* ---------- Notifications ---------- */
+const PUSH={reg:null,sub:null,ready:false,msg:null};
+const isIOS=/iP(hone|ad|od)/.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1);
+const isStandalone=()=>matchMedia("(display-mode: standalone)").matches||navigator.standalone===true;
+const pushSupported=()=>"serviceWorker" in navigator&&"PushManager" in window&&"Notification" in window;
+function pushHidden(){ try{ return localStorage.getItem("quiz-push-later")==="1"; }catch(e){ return false; } }
+function u8(b64){ const s=atob(b64.replace(/-/g,"+").replace(/_/g,"/")+"===".slice((b64.length+3)%4)); return Uint8Array.from(s,c=>c.charCodeAt(0)); }
+async function savePush(sub){ const j=sub.toJSON(); await rpc("save_push",{...cred(),p_endpoint:j.endpoint,p_p256dh:j.keys.p256dh,p_auth:j.keys.auth}); }
+async function initPush(){
+  if(!pushSupported()) { PUSH.ready=true; return; }
+  try{ PUSH.reg=await navigator.serviceWorker.register("sw.js");
+    PUSH.sub=await PUSH.reg.pushManager.getSubscription();
+    if(PUSH.sub&&Notification.permission==="granted"&&S.auth) await savePush(PUSH.sub);
+  }catch(e){}
+  PUSH.ready=true; if(S.tab==="quiz") render();
+}
+async function enablePush(){
+  PUSH.msg=null;
+  try{
+    const perm=await Notification.requestPermission();
+    if(perm!=="granted"){ PUSH.msg=perm==="denied"?"Notifications refusées. Pour changer d'avis : Réglages du téléphone → Notifications → Quiz Épargne.":"Pas de souci, tu pourras les activer plus tard."; render(); return; }
+    const reg=PUSH.reg||await navigator.serviceWorker.register("sw.js"); await navigator.serviceWorker.ready;
+    PUSH.sub=await reg.pushManager.getSubscription()||await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:u8(VAPID_PUBLIC)});
+    await savePush(PUSH.sub); PUSH.msg="Notifications activées.";
+  }catch(e){ PUSH.msg="Impossible d'activer les notifications sur ce téléphone ("+e.message+")."; }
+  render();
+}
+async function disablePush(){
+  try{ if(PUSH.sub){ await rpc("remove_push",{p_endpoint:PUSH.sub.endpoint}); await PUSH.sub.unsubscribe(); } }catch(e){}
+  PUSH.sub=null; PUSH.msg="Notifications désactivées."; render();
+}
+function renderPush(){
+  if(S.mode==="trial"||S.cur||S.qIndex!==null||!PUSH.ready) return;
+  const on=PUSH.sub&&"Notification" in window&&Notification.permission==="granted";
+  const later=()=>{ try{ localStorage.setItem("quiz-push-later","1"); }catch(e){} render(); };
+  const msg=PUSH.msg?el("p",{class:/Impossible|refusées/.test(PUSH.msg)?"error":"okmsg",style:"font-size:14px"},PUSH.msg):null;
+  if(on){ $view.append(el("div",{class:"pushline"},msg||el("span",{},"Notifications activées"),el("button",{class:"ghost-sm",onclick:disablePush},"Désactiver"))); return; }
+  if(!pushSupported()){
+    if(isIOS&&!isStandalone()&&!pushHidden()) $view.append(el("div",{class:"card invite"},el("div",{},el("h3",{},"Notifications"),
+      el("p",{class:"muted",style:"font-size:14px"},"Sur iPhone, elles ne marchent que depuis l'icône de l'appli : dans Safari, touche Partager puis « Sur l'écran d'accueil », et ouvre le quiz depuis cette icône.")),
+      el("button",{class:"ghost-sm",onclick:later},"Masquer")));
+    return;
+  }
+  if(Notification.permission==="denied"){ if(msg) $view.append(el("div",{class:"card"},msg)); return; }
+  if(pushHidden()&&!msg){ $view.append(el("div",{class:"pushline"},el("button",{class:"ghost-sm",onclick:enablePush},"Activer les notifications"))); return; }
+  $view.append(el("div",{class:"card invite"},el("div",{},el("h3",{},"Notifications"),
+    el("p",{class:"muted",style:"font-size:14px"},"Un message le lundi matin quand la nouvelle série sort, et un rappel le samedi si tu ne l'as pas terminée. Rien d'autre."),msg),
+    el("div",{style:"display:flex;flex-direction:column;gap:6px;align-items:stretch"},
+      el("button",{class:"btn ghost",onclick:enablePush},"Activer les notifications"),
+      pushHidden()?null:el("button",{class:"ghost-sm",onclick:later},"Plus tard"))));
+}
+
 /* ---------- Démarrage ---------- */
 async function start(){
   if(SUPABASE_URL.includes("VOTRE-PROJET")){ S.error="L'appli n'est pas encore reliée à sa base de données : renseigne SUPABASE_URL et SUPABASE_KEY en haut du fichier."; render(); return; }
   S.auth=loadAuth();
   checkForum();
-  if(S.auth){ try{ await loadWeek(); loadBadges(); loadArchives(); }catch(e){ if(/Code|Prénom|essais/.test(e.message)){ S.auth=null; saveAuth(null); } else S.error=e.message; } }
+  if(S.auth){ try{ await loadWeek(); loadBadges(); loadArchives(); initPush(); }catch(e){ if(/Code|Prénom|essais/.test(e.message)){ S.auth=null; saveAuth(null); } else S.error=e.message; } }
   render();
 }
 document.addEventListener("visibilitychange",async()=>{ if(document.visibilityState==="visible"&&S.auth&&!S.busy&&S.qIndex===null){ try{ await loadWeek(); render(); }catch(e){} } });

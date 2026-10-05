@@ -580,7 +580,33 @@ function renderPrizes(){
 }
 
 /* ---------- Réglages ---------- */
+const NOTIFY_URL=SUPABASE_URL+"/functions/v1/notify";
+async function deviceSub(){
+  if(!("serviceWorker" in navigator)) return null;
+  const reg=await navigator.serviceWorker.getRegistration(); if(!reg||!reg.pushManager) return null;
+  return reg.pushManager.getSubscription();
+}
+function renderPushTest(){
+  const out=el("p",{class:"muted",style:"font-size:14px"},S.pushInfo||"");
+  const btn=el("button",{class:"btn",onclick:async()=>{ btn.disabled=true; out.className="muted"; out.textContent="Envoi…";
+    try{
+      const sub=await deviceSub();
+      if(!sub) throw new Error("Cet appareil n'est pas abonné. Ouvre l'appli depuis l'icône de l'écran d'accueil, onglet Cette semaine, et touche « Activer les notifications ».");
+      let res; try{ res=await fetch(NOTIFY_URL,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({kind:"test",pass:S.pass,sub:sub.toJSON()})}); }
+      catch(e){ throw new Error("La fonction « notify » ne répond pas : vérifie qu'elle est bien créée dans Supabase et que « Verify JWT » est désactivé."); }
+      const d=await res.json().catch(()=>({}));
+      if(res.status===401) throw new Error("Supabase refuse l'appel : désactive « Verify JWT » dans les réglages de la fonction « notify ».");
+      if(!res.ok||d.error) throw new Error(d.error||d.message||("Erreur "+res.status));
+      S.pushInfo=`Notification envoyée : elle doit arriver dans quelques secondes. ${d.players} collègue${d.players>1?"s ont":" a"} activé les notifications.`;
+      out.className="okmsg"; out.textContent=S.pushInfo;
+    }catch(x){ out.className="error"; out.textContent=x.message; }
+    btn.disabled=false; }},"M'envoyer une notification test");
+  $view.append(el("div",{class:"card"},el("h2",{},"Notifications"),
+    el("p",{class:"muted",style:"font-size:14px"},"Envoyées automatiquement : le lundi à 8 h pour annoncer la nouvelle série, et le samedi à 10 h aux joueurs qui ne l'ont pas terminée. Le test n'est envoyé qu'à ce téléphone."),
+    btn,out));
+}
 function renderSettings(){
+  renderPushTest();
   const cur=el("input",{id:"cur",type:"password",autocomplete:"current-password"}), nw=el("input",{id:"new",type:"password",autocomplete:"new-password",placeholder:"8 caractères minimum"});
   const err=el("p",{class:"error",role:"alert"});
   $view.append(el("form",{class:"card",onsubmit:async e=>{ e.preventDefault(); err.textContent="";
