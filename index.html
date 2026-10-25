@@ -237,7 +237,7 @@ nav svg{display:block;margin:0 auto 3px;width:20px;height:20px}
 <script>
 const L=["A","B","C","D"];
 const $view=document.getElementById("view"), $who=document.getElementById("who"), $nav=document.getElementById("nav");
-const S={mode:"season",season:null,trial:null,sel:[],numVal:"",proposals:null,themes:null,proposeOpen:false,pdraft:null,cur:null,pending:null,phase:null,boards:null,compose:null,filter:null,flash:null,badges:null,badgeOpen:null,forum:null,forumSeen:0,prizes:null,auth:null,tab:"quiz",week:null,nextStart:null,mine:[],qIndex:null,busy:false,board:null,archives:null,review:null,error:null};
+const S={mode:"season",season:null,trial:null,catchup:null,sel:[],numVal:"",proposals:null,themes:null,proposeOpen:false,pdraft:null,cur:null,pending:null,phase:null,boards:null,compose:null,filter:null,flash:null,badges:null,badgeOpen:null,forum:null,forumSeen:0,prizes:null,auth:null,tab:"quiz",week:null,nextStart:null,mine:[],qIndex:null,busy:false,board:null,archives:null,review:null,error:null};
 
 /* ---------- Accès à la base (fonctions Supabase) ---------- */
 async function rpc(fn,args={}){
@@ -311,7 +311,7 @@ function renderLogin(){
     err,btn);
   $view.append(form);
 }
-function logout(){ stopTimer(); if(PUSH.sub){ rpc("remove_push",{p_endpoint:PUSH.sub.endpoint}).catch(()=>{}); PUSH.sub.unsubscribe().catch(()=>{}); PUSH.sub=null; } S.cur=null; S.badges=null; S.archives=null; S.review=null; S.auth=null; saveAuth(null); S.mine=[]; S.qIndex=null; S.tab="quiz"; render(); }
+function logout(){ stopTimer(); if(PUSH.sub){ rpc("remove_push",{p_endpoint:PUSH.sub.endpoint}).catch(()=>{}); PUSH.sub.unsubscribe().catch(()=>{}); PUSH.sub=null; } S.cur=null; S.badges=null; S.archives=null; S.review=null; S.auth=null; saveAuth(null); S.mine=[]; S.qIndex=null; S.mode="season"; S.catchup=null; S.tab="quiz"; render(); }
 
 /* ---------- Semaine en cours ---------- */
 async function loadWeek(){
@@ -319,12 +319,13 @@ async function loadWeek(){
   S.trial=await rpc("trial_week").catch(()=>null);
   if(!S.season) S.nextStart=await rpc("next_week_start");
   if(S.mode==="trial"&&!S.trial) S.mode="season";
-  S.week=S.mode==="trial"?S.trial:S.season;
+  if(S.mode==="catchup"&&!S.catchup) S.mode="season";
+  S.week=S.mode==="trial"?S.trial:S.mode==="catchup"?S.catchup:S.season;
   if(!S.week){ S.mine=[]; S.pending=null; return; }
   const r=await rpc("my_week",{...cred(),p_week:S.week.id});
   S.mine=r.answers||[]; S.pending=r.pending?r.pending.q:null;
 }
-async function switchMode(m){ S.mode=m; S.cur=null; S.qIndex=null; stopTimer(); S.busy=true; render(); try{ await loadWeek(); }catch(e){ S.flash=e.message; } S.busy=false; render(); window.scrollTo(0,0); }
+async function switchMode(m){ S.mode=m; if(m!=="catchup") S.catchup=null; S.cur=null; S.qIndex=null; stopTimer(); S.busy=true; render(); try{ await loadWeek(); }catch(e){ S.flash=e.message; } S.busy=false; render(); window.scrollTo(0,0); }
 let timerId=null;
 function stopTimer(){ if(timerId){ clearInterval(timerId); timerId=null; } }
 function remaining(){ return S.cur? Math.max(0,S.cur.limit-(Date.now()-S.cur.t0)/1000) : 0; }
@@ -346,40 +347,47 @@ const FORMATS={qcm:"Une seule bonne réponse",vf:"Vrai ou faux",num:"Réponse à
 function fmtNum(v){ return v==null?"":Number(v).toLocaleString("fr-FR",{maximumFractionDigits:2}); }
 function parseNum(t){ const x=String(t).replace(/[\s  €%]/g,"").replace(",","."); return x===""||isNaN(+x)?null:+x; }
 function trialBanner(){ return el("div",{class:"trialbar"},el("span",{},"Série d'essai · hors classement"),el("button",{class:"ghost-sm",onclick:()=>switchMode("season")},"Revenir à la série de la semaine")); }
+function catchupBanner(){ return el("div",{class:"trialbar"},el("span",{},"Rattrapage · "+S.week.label),el("button",{class:"ghost-sm",onclick:()=>switchMode("season")},"Revenir à la série de la semaine")); }
+function playCatchup(w){ S.catchup={id:w.id,label:w.label,theme:w.theme,start:w.start,end:w.end,count:w.total,limit:30,counts:true,catchup:true}; switchMode("catchup"); }
 function trialInvite(){
   if(!S.trial) return null;
   return el("div",{class:"card invite"},el("div",{},el("h3",{},"Série d'essai"),el("p",{class:"muted",style:"font-size:14px"},"10 questions pour découvrir les formats : vrai/faux, réponse à taper, plusieurs réponses, classement. Hors classement, et tu peux la recommencer.")),
     el("button",{class:"btn ghost",onclick:()=>switchMode("trial")},"Essayer"));
 }
 function renderQuiz(){
-  const w=S.week, trial=S.mode==="trial";
+  const w=S.week, trial=S.mode==="trial", catchup=S.mode==="catchup";
   if(trial) $view.append(trialBanner());
+  if(catchup) $view.append(catchupBanner());
   if(!w){ $view.append(el("div",{class:"card"},el("h2",{},"Pas de série ouverte"),el("p",{class:"muted"},S.nextStart?`Prochaine série le ${fmt(S.nextStart)}.`:"Les prochaines questions arrivent bientôt."))); const inv=trialInvite(); if(inv) $view.append(inv); return; }
   const n=w.count, mine=S.mine, done=mine.length>=n;
   const card=el("div",{class:"card"},
-    el("div",{class:"week-head"},el("div",{},el("h3",{},w.label),el("h2",{},w.theme)),trial?null:el("span",{class:"pill"},`Jusqu'au ${fmt(w.end)}`)),
+    el("div",{class:"week-head"},el("div",{},el("h3",{},w.label),el("h2",{},w.theme)),trial||catchup?null:el("span",{class:"pill"},`Jusqu'au ${fmt(w.end)}`)),
     el("div",{class:"dots"},Array.from({length:n},(x,i)=>el("span",{class:i<mine.length?(mine[i].correct?"ok":"bad"):(i===mine.length&&!done?"cur":"")}))));
   if(S.flash){ card.append(el("p",{class:"error"},S.flash)); S.flash=null; }
   if(done&&S.qIndex===null){
     const sc=mine.filter(m=>m.correct).length;
-    card.append(el("div",{},el("p",{class:"muted"},trial?"Ton score à l'essai":"Ton score cette semaine"),el("div",{class:"score-big"},sc,el("span",{}," / "+n))),
+    card.append(el("div",{},el("p",{class:"muted"},trial?"Ton score à l'essai":catchup?"Ton score en rattrapage":"Ton score cette semaine"),el("div",{class:"score-big"},sc,el("span",{}," / "+n))),
       el("p",{},sc===n?"Sans faute. Bravo.":sc>=0.7*n?"Beau score. Les corrections détaillées sont juste en dessous.":"Relis les corrections : elles serviront pour la suite."));
     if(trial){
       card.append(el("button",{class:"btn",onclick:async()=>{ try{ await rpc("reset_trial",cred()); await switchMode("trial"); }catch(e){ S.flash=e.message; render(); } }},"Recommencer l'essai"),
         el("button",{class:"btn ghost",onclick:()=>switchMode("season")},"Revenir à la série de la semaine"));
+    } else if(catchup){
+      card.append(el("p",{class:"muted",style:"font-size:13px"},"Tes points comptent au classement, comme si tu avais joué à temps."),
+        el("button",{class:"btn ghost",onclick:()=>{openReview(w.id);window.scrollTo(0,0);}},"Voir les corrections"),
+        el("button",{class:"btn",onclick:()=>switchMode("season")},"Revenir à la série de la semaine"));
     } else {
       card.append(el("button",{class:"btn ghost",onclick:()=>{openReview(w.id);window.scrollTo(0,0);}},"Voir les corrections"),
         el("button",{class:"btn",onclick:()=>setTab("board")},"Voir le classement"),
         el("p",{class:"muted",style:"font-size:13px;text-align:center"},`${w.finished} participant${w.finished>1?"s ont":" a"} terminé la série.`));
     }
-    $view.append(card); if(!trial){ const inv=trialInvite(); if(inv) $view.append(inv); } return;
+    $view.append(card); if(S.mode==="season"){ const inv=trialInvite(); if(inv) $view.append(inv); } return;
   }
   // Correction de la question qui vient d'être jouée
   if(S.qIndex!==null){
     const i=S.qIndex, a=mine[i], last=mine.length>=n;
     card.append(el("div",{class:"qnum"},el("span",{},`Question ${i+1} sur ${n}`),levelTag(i,n)),el("div",{class:"question"},a.text),byLine(a.by));
     card.append(...feedbackBlock(a));
-    card.append(el("button",{class:"btn",disabled:S.busy,onclick:async()=>{ if(last){ S.qIndex=null; try{ if(!trial) S.season=S.week=await rpc("current_week")||S.week; }catch(e){} render(); if(!trial) loadArchives(); } else startQ(i+1); }},last?"Voir mon score":"Question suivante"));
+    card.append(el("button",{class:"btn",disabled:S.busy,onclick:async()=>{ if(last){ S.qIndex=null; try{ if(S.mode==="season") S.season=S.week=await rpc("current_week")||S.week; }catch(e){} render(); if(!trial) loadArchives(); } else startQ(i+1); }},last?"Voir mon score":"Question suivante"));
     $view.append(card); return;
   }
   const i=mine.length;
@@ -400,7 +408,7 @@ function renderQuiz(){
       el("p",{},resumed?"Cette question a déjà été affichée : le chrono a continué de tourner.":`Le chrono démarre dès que la question s'affiche : ${w.limit} secondes, et 45 secondes pour les réponses à taper, à cocher ou à classer. Sans réponse, la question compte comme fausse.`)),
     el("button",{class:"btn",disabled:S.busy,onclick:()=>startQ(i)},resumed?"Reprendre la question":(i===0?"Commencer la série":"Afficher la question")));
   $view.append(card);
-  if(!trial&&i===0){ const inv=trialInvite(); if(inv) $view.append(inv); }
+  if(S.mode==="season"&&i===0){ const inv=trialInvite(); if(inv) $view.append(inv); }
 }
 // Zone de réponse selon le format
 function answerArea(q,i){
@@ -519,13 +527,19 @@ function renderReview(){
 }
 // Historique des séries, sous la série de la semaine (masqué pendant une question)
 function renderHistory(){
-  if(S.mode==="trial"||S.cur||S.qIndex!==null) return;
+  if(S.mode!=="season"||S.cur||S.qIndex!==null) return;
   const list=Array.isArray(S.archives)?S.archives.filter(w=>!S.week||w.id!==S.week.id||(S.mine||[]).length>=S.week.count):[];
   if(!list.length) return;
-  $view.append(el("div",{class:"card"},el("h2",{},"Mes séries"),el("div",{},list.map(w=>
+  // Série passée pas terminée et encore jouable : à rattraper
+  const late=w=>w.past&&w.answered<w.total&&w.can_play!==false;
+  const n=list.filter(late).length;
+  $view.append(el("div",{class:"card"},el("div",{class:"week-head"},el("h2",{},"Mes séries"),n?el("span",{class:"pill"},`${n} à rattraper`):null),
+    n?el("p",{class:"muted",style:"font-size:13px"},"Tu peux rattraper les séries manquées jusqu'à la fin de la saison : elles rapportent autant de points."):null,
+    el("div",{},list.map(w=>
     el("div",{class:"archive"},el("div",{style:"min-width:0"},el("strong",{},`${w.label} · ${w.theme}`),
-      el("div",{class:"muted",style:"font-size:13px"},w.answered?`Ton score : ${w.score} / ${w.total}`:"Pas joué")),
-      el("button",{onclick:()=>{openReview(w.id);window.scrollTo(0,0);}},"Corrections"))))));
+      el("div",{class:"muted",style:"font-size:13px"},w.answered>=w.total?`Ton score : ${w.score} / ${w.total}`:w.answered?`Commencée : ${w.answered} / ${w.total}`:"Pas encore jouée")),
+      late(w)?el("button",{onclick:()=>{playCatchup(w);window.scrollTo(0,0);}},w.answered?"Terminer":"Rattraper")
+        :el("button",{onclick:()=>{openReview(w.id);window.scrollTo(0,0);}},"Corrections"))))));
 }
 
 function byLine(by){ return by?el("div",{class:"by"},icon("feather"),`Question proposée par ${by}`):document.createTextNode(""); }
@@ -777,7 +791,7 @@ async function disablePush(){
   PUSH.sub=null; PUSH.msg="Notifications désactivées."; render();
 }
 function renderPush(){
-  if(S.mode==="trial"||S.cur||S.qIndex!==null||!PUSH.ready) return;
+  if(S.mode!=="season"||S.cur||S.qIndex!==null||!PUSH.ready) return;
   const on=PUSH.sub&&"Notification" in window&&Notification.permission==="granted";
   const later=()=>{ try{ localStorage.setItem("quiz-push-later","1"); }catch(e){} render(); };
   const msg=PUSH.msg?el("p",{class:/Impossible|refusées/.test(PUSH.msg)?"error":"okmsg",style:"font-size:14px"},PUSH.msg):null;
